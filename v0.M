@@ -1,6 +1,6 @@
 % Generate random 2D X and Y arrays
-n = 100; % number of X random numbers
-m = 10 % number of Y random numbers
+n = 10; % number of X random numbers
+m = 4 % number of Y random numbers
 d = 2
 k = 3
 
@@ -10,15 +10,20 @@ r = (b-a).*rand(1000,1) + a;
 
 X = zeros(n,d);
 for i = 1:d
-    X(:,i) = (b-a).*rand(n,1) + a;;
+    % X(:,i) = (b-a).*rand(n,1) + a;
+    X(:,i) = 1;
 end
 
 Y = zeros(m,d);
 for i = 1:d
-    Y(:,i) = (b-a).*rand(m,1) + a;;
+    % Y(:,i) = (b-a).*rand(m,1) + a;
+    Y(:,i) = 1;
 end
 
 % Calculate D
+a = sum(X.^2,2);
+b = - 2 * X*Y.';
+c = sum(Y.^2,2).';
 D = sqrt(sum(X.^2,2) - 2 * X*Y.' + sum(Y.^2,2).');
 
 % Interpret the D matrix

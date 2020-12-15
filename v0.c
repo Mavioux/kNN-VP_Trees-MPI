@@ -1,6 +1,8 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include <time.h>
+#include <cblas.h>
+#include <math.h>
 
 #ifndef RAND_MAX
 #define RAND_MAX ((int) ((unsigned) ~0 >> 1))
@@ -14,19 +16,66 @@ typedef struct knnresult{
   int      k;       //!< Number of nearest neighbors            [scalar]
 } knnresult;
 
-knnresult kNN(double * X, double * Y, int n, int m, int d, int k);
+knnresult kNN(double * X, double * Y, int n, int m, int d, int k){
+
+    knnresult knn_result;
+    knn_result.nidx = malloc(m * k * sizeof(int));
+    knn_result.ndist = malloc(m * k * sizeof(int));
+
+    double *x_squared = malloc(n * d * sizeof(double));
+    double *y_squared = malloc(m * d * sizeof(double));
+    double *x_sum = malloc(n * sizeof(double));
+    double *y_sum = malloc(m * sizeof(double));
+    double *d_matrix = malloc(n * m * sizeof(double));
+
+    /* sum(X.^2,2) */
+    for(int i = 0; i < n * d; i++) {
+        x_squared[i] = X[i] * X[i];
+        if(i % (d-1) == 0) {
+            for(int j = 0; j < d; j++) {
+                x_sum[i-1] += x_squared[i-j];
+            }
+        }
+    }
+
+    /* sum(Y.^2,2) (not transposed yet) */
+    for(int i = 0; i < m * d; i++) {
+        y_squared[i] = Y[i] * Y[i];
+        if(i % (d-1) == 0) {
+            for(int j = 0; j < d; j++) {
+                y_sum[i-1] += y_squared[i-j];
+            }
+        }
+    }
+
+    /* -2 X Y' */
+    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasTrans, n, m, d, -2, X, d, Y, d, 0, d_matrix, m);
+    
+    double sum = 0;
+    /* (sum(X.^2,2) - 2 * X*Y.' + sum(Y.^2,2).') */
+    for(int i = 0; i < n; i++) {
+        for(int j = 0; j < m; j++) {
+            d_matrix[j + m*i] += x_sum[i] + y_sum[j];
+            d_matrix[j + m*i] = sqrt(d_matrix[j + m*i]);
+            sum += d_matrix[j + m*i];
+        }
+    }
+    printf("%f\n", sum);
+
+    return;
+};
 
 double randomReal(double low, double high) {
-  double d;
+    double d;
 
-  d = (double) rand() / ((double) RAND_MAX + 1);
-  return (low + d * (high - low));
+    d = (double) rand() / ((double) RAND_MAX + 1);
+    return (low + d * (high - low));
 }
 
 void main() {
-    int n = 100;
+    int n = 10;
     int d = 2;
-    int m = 10;
+    int m = 4;
     int k = 3;
     knnresult knnresult;
     knnresult.nidx = malloc(m * k * sizeof(int));
@@ -42,12 +91,14 @@ void main() {
 
     // Create an X array n x d
     for(int i = 0; i < n * d; i++) {
-        x_data[i] = randomReal(0, 100);
+        // x_data[i] = randomReal(0, 100);
+        x_data[i] = 1;
     }
 
     // Create an Υ array n x d
     for(int i = 0; i < m * d; i++) {
-        y_data[i] = randomReal(0, 100);
+        // y_data[i] = randomReal(0, 100);
+        y_data[i] = 1;
     }
 
     kNN(x_data, y_data, n, m, d, k);
