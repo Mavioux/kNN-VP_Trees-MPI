@@ -38,3 +38,25 @@ for col = 1:m
         D(index,col) = inf;
     end
 end
+
+
+% Test matrices
+X=[];
+count=0;
+for i=1:n
+ for j=1:d
+    
+    X(i,j)=count;
+    count=count+1;
+  end
+end 
+
+Y=[];
+count=0;
+for i=1:m
+ for j=1:d
+    
+    Y(i,j)=count;
+    count=count+1;
+  end
+end 

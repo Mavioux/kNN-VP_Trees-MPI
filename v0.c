@@ -31,23 +31,24 @@ knnresult kNN(double * X, double * Y, int n, int m, int d, int k){
     /* sum(X.^2,2) */
     for(int i = 0; i < n * d; i++) {
         x_squared[i] = X[i] * X[i];
-        if(i % (d-1) == 0) {
-            for(int j = 0; j < d; j++) {
-                x_sum[i-1] += x_squared[i-j];
-            }
+    }
+
+    for(int i = 0; i < n; i++) {
+        for(int j = 0; j < d; j++) {
+            x_sum[i] += x_squared[d*i + j];
         }
     }
 
     /* sum(Y.^2,2) (not transposed yet) */
     for(int i = 0; i < m * d; i++) {
         y_squared[i] = Y[i] * Y[i];
-        if(i % (d-1) == 0) {
-            for(int j = 0; j < d; j++) {
-                y_sum[i-1] += y_squared[i-j];
-            }
-        }
     }
 
+    for(int i = 0; i < m; i++) {
+        for(int j = 0; j < d; j++) {
+            y_sum[i] += y_squared[d*i + j];
+        }
+    }
     /* -2 X Y' */
     cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasTrans, n, m, d, -2, X, d, Y, d, 0, d_matrix, m);
     
@@ -61,6 +62,9 @@ knnresult kNN(double * X, double * Y, int n, int m, int d, int k){
         }
     }
     printf("%f\n", sum);
+
+    // We have in our hands the D matrix in row major format
+    // Next we have to search each column for the kNN
 
     return;
 };
@@ -91,14 +95,14 @@ void main() {
 
     // Create an X array n x d
     for(int i = 0; i < n * d; i++) {
-        // x_data[i] = randomReal(0, 100);
-        x_data[i] = 1;
+        x_data[i] = randomReal(0, 100);
+        // x_data[i] = i;
     }
 
     // Create an Υ array n x d
     for(int i = 0; i < m * d; i++) {
-        // y_data[i] = randomReal(0, 100);
-        y_data[i] = 1;
+        y_data[i] = randomReal(0, 100);
+        // y_data[i] = i;
     }
 
     kNN(x_data, y_data, n, m, d, k);
