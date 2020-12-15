@@ -31,7 +31,7 @@ D = sqrt(sum(X.^2,2) - 2 * X*Y.' + sum(Y.^2,2).');
 % Every column represents the distance of the column-th element of the Y matrix to the row-th element of the X matrix
 % In order to find the kNN of each element we have to search every row of each column and keep the k lowest values
 
-min_matrix = zeros(3, m);
+min_matrix = zeros(k, m);
 for col = 1:m
     for i = 1:k
         [min_matrix(i,col), index] = min(D(:,col));

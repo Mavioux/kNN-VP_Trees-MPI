@@ -39,7 +39,7 @@ knnresult kNN(double * X, double * Y, int n, int m, int d, int k){
         }
     }
 
-    /* sum(Y.^2,2) (not transposed yet) */
+    /* sum(Y.^2,2) (not transposed) */
     for(int i = 0; i < m * d; i++) {
         y_squared[i] = Y[i] * Y[i];
     }
@@ -64,9 +64,24 @@ knnresult kNN(double * X, double * Y, int n, int m, int d, int k){
     printf("%f\n", sum);
 
     // We have in our hands the D matrix in row major format
-    // Next we have to search each column for the kNN
+    // Next we have to search each column for the kNN    
+    for(int i = 0; i < m; i++) {
+        for(int kappa = 0; kappa < k; kappa++) {
+            double min = INFINITY; 
+            int index = -1;
+            for(int j = 0; j < n; j++) {
+                if(min > d_matrix[j * m + i]) {
+                    min = d_matrix[j * m + i];
+                    index = j * m + i;
+                }
+            }
+            knn_result.ndist[i*k+kappa] = min;
+            knn_result.nidx[i*k+kappa] = index;
+            d_matrix[index] =  INFINITY;
+        }        
+    }
 
-    return;
+    return knn_result;
 };
 
 double randomReal(double low, double high) {
@@ -77,9 +92,9 @@ double randomReal(double low, double high) {
 }
 
 void main() {
-    int n = 10;
+    int n = 100;
     int d = 2;
-    int m = 4;
+    int m = 25;
     int k = 3;
     knnresult knnresult;
     knnresult.nidx = malloc(m * k * sizeof(int));
@@ -105,5 +120,5 @@ void main() {
         // y_data[i] = i;
     }
 
-    kNN(x_data, y_data, n, m, d, k);
+   knnresult =  kNN(x_data, y_data, n, m, d, k);
 }
