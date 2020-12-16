@@ -8,7 +8,7 @@ EXECUTABLES = v0
 all: $(EXECUTABLES)
 
 v0: v0.c
-	$(CC) $< -o $@ -lopenblas -lpthread -lm
+	$(CC) $< -o ../out/$@ -lopenblas -lpthread -lm
 
 clean:
 	$(RM) *.o *~ $(EXECUTABLES)
