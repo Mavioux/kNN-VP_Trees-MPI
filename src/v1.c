@@ -62,25 +62,25 @@ knnresult kNN(double * X, double * Y, int n, int m, int d, int k, int rank){
             sum += d_matrix[j + m*i];
         }
     }
-    printf("%f\n", sum);
+    printf("%d %f\n",rank, sum);
 
-    // We have in our hands the D matrix in row major format
-    // Next we have to search each column for the kNN    
-    for(int i = 0; i < m; i++) {
-        for(int kappa = 0; kappa < k; kappa++) {
-            double min = INFINITY; 
-            int index = -1;
-            for(int j = 0; j < n; j++) {
-                if(min > d_matrix[j * m + i]) {
-                    min = d_matrix[j * m + i];
-                    index = j * m + i;
-                }
-            }
-            knn_result.ndist[i*k+kappa] = min;
-            knn_result.nidx[i*k+kappa] = index;
-            d_matrix[index] =  INFINITY;
-        }        
-    }
+    // // We have in our hands the D matrix in row major format
+    // // Next we have to search each column for the kNN    
+    // for(int i = 0; i < m; i++) {
+    //     for(int kappa = 0; kappa < k; kappa++) {
+    //         double min = INFINITY; 
+    //         int index = -1;
+    //         for(int j = 0; j < n; j++) {
+    //             if(min > d_matrix[j * m + i]) {
+    //                 min = d_matrix[j * m + i];
+    //                 index = j * m + i;
+    //             }
+    //         }
+    //         knn_result.ndist[i*k+kappa] = min;
+    //         knn_result.nidx[i*k+kappa] = index;
+    //         d_matrix[index] =  INFINITY;
+    //     }        
+    // }
 
     return knn_result;
 }
@@ -133,7 +133,7 @@ void main() {
     int p;
     MPI_Comm_size(MPI_COMM_WORLD, &p);    
 
-    int chunks = d * n / p;
+    int chunks = n / p;
 
     // Get the rank of the process
     int world_rank;
@@ -144,32 +144,20 @@ void main() {
     int process_m;
 
     if(world_rank == p-1) {
-        x_i_data = malloc(chunks + n % d);
+        x_i_data = malloc(d * chunks + n % p);
         x_i_data = &x_data[world_rank * chunks];
-        process_n = chunks + n % d;
-        process_m = chunks + n % d;
+        process_n = chunks + n % p;
+        process_m = chunks + n % p;
     }
     else {
-        x_i_data = malloc(chunks);
+        x_i_data = malloc(chunks * d);
         x_i_data = &x_data[world_rank * chunks];
         process_n = chunks;
         process_m = chunks;
     }
 
-    printf("%d: x_i_data: %f process_n: %d process_m: %d\n", world_rank, x_i_data[process_n-1], process_n, process_m);
-
-    // The code that each one has to execute at the same time
-    knnresult knn_temp = kNN(x_i_data, x_i_data, process_n, process_m, d, k, world_rank);
-
-    // if(world_rank == p-1) {
-    //     for(int i = 0; i < chunks; i++) {
-    //         if(i%d == 0) {
-    //             printf("\n");
-    //         }
-    //         printf("%f ", x_i_data[i]);
-    //     }
-    //     printf("\n");
-    // }
+    printf("%d: x_i_data: %f process_n: %d process_m: %d\n", world_rank, x_i_data[process_n*d-1], process_n, process_m);
+    knnresult temp_knn = kNN(x_i_data, x_i_data, process_n, process_m, d, k, world_rank);
 
     // Finalize the MPI environment.
     MPI_Finalize();
