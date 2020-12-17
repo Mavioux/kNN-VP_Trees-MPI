@@ -1,14 +1,18 @@
 SHELL := /bin/bash
 
 CC = gcc -O3
+MPICC = mpicc
 RM = rm -f
 
-EXECUTABLES = v0
+EXECUTABLES = v0 v1
 
 all: $(EXECUTABLES)
 
 v0: v0.c
 	$(CC) $< -o ../out/$@ -lopenblas -lpthread -lm
+
+v1: v1.c
+	$(MPICC) $< -o ../out/$@ -lopenblas -lpthread -lm
 
 clean:
 	$(RM) *.o *~ $(EXECUTABLES)

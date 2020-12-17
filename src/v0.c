@@ -114,7 +114,7 @@ void main() {
         // x_data[i] = i;
     }
 
-    // Create an Υ array n x d
+    // Create a Υ array m x d
     for(int i = 0; i < m * d; i++) {
         y_data[i] = randomReal(0, 100);
         // y_data[i] = i;
