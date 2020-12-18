@@ -31,34 +31,58 @@ knnresult kNN(double * X, double * Y, int n, int m, int d, int k, int rank){
     double *d_matrix = malloc(n * m * sizeof(double));
 
     /* sum(X.^2,2) */
+    // printf("x_squared\n");
     for(int i = 0; i < n * d; i++) {
         x_squared[i] = X[i] * X[i];
+        // printf("%d %f\n",i, x_squared[i]);
     }
 
+    // printf("x_sum\n");
     for(int i = 0; i < n; i++) {
+        double temp = 0;
         for(int j = 0; j < d; j++) {
-            x_sum[i] += x_squared[d*i + j];
+            temp += x_squared[d*i + j];
+            // printf("x_squared[%d]:  %f\n", d*i + j, x_squared[d*i + j]);
+            // printf("temp: %f\n", temp);
         }
+        x_sum[i] = temp;
+        // printf("%d: %f\n", i, x_sum[i]);
     }
 
     /* sum(Y.^2,2) (not transposed) */
+    // printf("x_squared\n");
     for(int i = 0; i < m * d; i++) {
         y_squared[i] = Y[i] * Y[i];
+        // printf("%d %f\n",i, y_squared[i]);
     }
 
+    // printf("y_sum\n");
     for(int i = 0; i < m; i++) {
+        double temp = 0;
         for(int j = 0; j < d; j++) {
-            y_sum[i] += y_squared[d*i + j];
+            temp += y_squared[d*i + j];
         }
+        y_sum[i] = temp;
+        // printf("%d %f\n",i, y_sum[i]);
+        
     }
 
     /* -2 X Y' */
     cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasTrans, n, m, d, -2, X, d, Y, d, 0, d_matrix, m);
+    // for(int i = 0; i < n; i++) {
+    //     for(int j = 0; j < m; j++) {
+    //         printf("d_matrix[%d]: %f\n", j + m*i, d_matrix[j + m*i]);
+    //     }
+    // }
+
     
     double sum = 0;
     /* (sum(X.^2,2) - 2 * X*Y.' + sum(Y.^2,2).') */
     for(int i = 0; i < n; i++) {
         for(int j = 0; j < m; j++) {
+            // printf("d_matrix[%d]: %f\n", j + m*i, d_matrix[j + m*i]);
+            // printf("x_sum[%d]: %f\n", i, x_sum[i]);
+            // printf("y_sum[%d]: %f\n", j, y_sum[j]);
             d_matrix[j + m*i] += x_sum[i] + y_sum[j];
             d_matrix[j + m*i] = sqrt(d_matrix[j + m*i]);
             sum += d_matrix[j + m*i];
@@ -68,21 +92,27 @@ knnresult kNN(double * X, double * Y, int n, int m, int d, int k, int rank){
 
     // We have in our hands the D matrix in row major format
     // Next we have to search each column for the kNN    
-    for(int i = 0; i < m; i++) {
-        for(int kappa = 0; kappa < k; kappa++) {
-            double min = INFINITY; 
-            int index = -1;
-            for(int j = 0; j < n; j++) {
-                if(min > d_matrix[j * m + i]) {
-                    min = d_matrix[j * m + i];
-                    index = j * m + i;
-                }
-            }
-            knn_result.ndist[i*k+kappa] = min;
-            knn_result.nidx[i*k+kappa] = index;
-            d_matrix[index] =  INFINITY;
-        }        
-    }
+    // for(int i = 0; i < m; i++) {
+    //     for(int kappa = 0; kappa < k; kappa++) {
+    //         double min = INFINITY; 
+    //         int index = -1;
+    //         for(int j = 0; j < n; j++) {
+    //             if(min > d_matrix[j * m + i]) {
+    //                 min = d_matrix[j * m + i];
+    //                 index = j * m + i;
+    //             }
+    //         }
+    //         // kati gamietai edw pera, ama ly8ei ayto 8a dakrysw apo sygkinhsh
+    //         // knn_result.ndist[i*k+kappa] = min;
+    //         // knn_result.nidx[i*k+kappa] = index;
+    //         d_matrix[index] =  INFINITY;
+    //     }        
+    // }
+
+    // for(int i = 0; i < m* k; i++) {
+    //     knn_result.ndist[i] = 1;
+    //     knn_result.nidx[i] = 1;
+    // }
 
 
     return knn_result;
@@ -145,13 +175,14 @@ void main() {
             // x_data[i] = randomReal(0, 10);
             x_data[i] = 1;
         }
-
-        //Broadcast to all other processes
-        for(int i = 1; i < p-1; i++) {
-            // MPI_Send to each process the appropriate array
-            MPI_Send(&x_data[i * chunks * d], chunks * d, MPI_DOUBLE, i, 0, MPI_COMM_WORLD);
+        if(p > 1) {
+            //Broadcast to all other processes
+            for(int i = 1; i < p-1; i++) {
+                // MPI_Send to each process the appropriate array
+                MPI_Send(&x_data[i * chunks * d], chunks * d, MPI_DOUBLE, i, 0, MPI_COMM_WORLD);
+            }
+            MPI_Send(&x_data[(p-1) * chunks * d], (chunks + n % d) * d, MPI_DOUBLE, p-1, 0, MPI_COMM_WORLD);
         }
-        MPI_Send(&x_data[(p-1) * chunks * d], (chunks + n % d) * d, MPI_DOUBLE, p-1, 0, MPI_COMM_WORLD);
 
         // After sending the message and receiving confirmation we are ready to call kNN on our data
         //Initialize variables for zero process
@@ -159,7 +190,7 @@ void main() {
         process_m = chunks;
         x_i_data = malloc(process_n * d * sizeof(double));
         x_i_data = x_data;
-        kNN(x_i_data, x_i_data, process_n, process_n, d, k, world_rank);
+        kNN(x_i_data, x_i_data, process_n, process_m, d, k, world_rank);
     }
     else if (world_rank == p - 1)
     {
@@ -172,8 +203,8 @@ void main() {
         MPI_Recv(x_i_data, process_n * d, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         // printf("%d %f\n",world_rank, x_i_data[0]);
 
-        // After receiving the message we are ready to call kNN on our data
-        kNN(x_i_data, x_i_data, process_n, process_n, d, k, world_rank);
+        // // After receiving the message we are ready to call kNN on our data
+        kNN(x_i_data, x_i_data, process_n, process_m, d, k, world_rank);
     }
     else
     {
@@ -186,8 +217,8 @@ void main() {
         MPI_Recv(x_i_data, process_n * d, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         // printf("%d %f\n", world_rank, x_i_data[0]);
 
-        // After receiving the message we are ready to call kNN on our data
-        kNN(x_i_data, x_i_data, process_n, process_n, d, k, world_rank);
+        // // After receiving the message we are ready to call kNN on our data
+        kNN(x_i_data, x_i_data, process_n, process_m, d, k, world_rank);
     }
     
     
