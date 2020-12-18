@@ -75,8 +75,8 @@ knnresult kNN(double * X, double * Y, int n, int m, int d, int k){
                     index = j * m + i;
                 }
             }
-            knn_result.ndist[i*k+kappa] = min;
-            knn_result.nidx[i*k+kappa] = index;
+            knn_result.ndist[kappa*m + i] = min;
+            knn_result.nidx[kappa*m + i] = index;
             d_matrix[index] =  INFINITY;
         }        
     }
@@ -92,9 +92,9 @@ double randomReal(double low, double high) {
 }
 
 void main() {
-    int n = 100;
+    int n = 10;
     int d = 2;
-    int m = 25;
+    int m = 4;
     int k = 3;
     knnresult knnresult;
     knnresult.nidx = malloc(m * k * sizeof(int));
@@ -111,14 +111,14 @@ void main() {
     // Create an X array n x d
     for(int i = 0; i < n * d; i++) {
         x_data[i] = randomReal(0, 100);
-        // x_data[i] = i;
+        // x_data[i] = 1;
     }
 
     // Create a Υ array m x d
     for(int i = 0; i < m * d; i++) {
         y_data[i] = randomReal(0, 100);
-        // y_data[i] = i;
+        // y_data[i] = 1;
     }
 
-   knnresult =  kNN(x_data, y_data, n, m, d, k);
+    knnresult =  kNN(x_data, y_data, n, m, d, k);       
 }

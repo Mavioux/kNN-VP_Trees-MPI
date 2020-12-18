@@ -92,22 +92,22 @@ knnresult kNN(double * X, double * Y, int n, int m, int d, int k, int rank){
 
     // We have in our hands the D matrix in row major format
     // Next we have to search each column for the kNN    
-    // for(int i = 0; i < m; i++) {
-    //     for(int kappa = 0; kappa < k; kappa++) {
-    //         double min = INFINITY; 
-    //         int index = -1;
-    //         for(int j = 0; j < n; j++) {
-    //             if(min > d_matrix[j * m + i]) {
-    //                 min = d_matrix[j * m + i];
-    //                 index = j * m + i;
-    //             }
-    //         }
-    //         // kati gamietai edw pera, ama ly8ei ayto 8a dakrysw apo sygkinhsh
-    //         // knn_result.ndist[i*k+kappa] = min;
-    //         // knn_result.nidx[i*k+kappa] = index;
-    //         d_matrix[index] =  INFINITY;
-    //     }        
-    // }
+    for(int i = 0; i < m; i++) {
+        for(int kappa = 0; kappa < k; kappa++) {
+            double min = INFINITY; 
+            int index = -1;
+            for(int j = 0; j < n; j++) {
+                if(min > d_matrix[j * m + i]) {
+                    min = d_matrix[j * m + i];
+                    index = j * m + i;
+                }
+            }
+            // kati gamietai edw pera, ama ly8ei ayto 8a dakrysw apo sygkinhsh
+            // knn_result.ndist[kappa*m + i] = min;
+            // knn_result.nidx[kappa*m + i] = index;
+            d_matrix[index] =  INFINITY;
+        }        
+    }
 
     // for(int i = 0; i < m* k; i++) {
     //     knn_result.ndist[i] = 1;
