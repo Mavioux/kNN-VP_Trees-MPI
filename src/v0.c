@@ -20,7 +20,7 @@ knnresult kNN(double * X, double * Y, int n, int m, int d, int k){
 
     knnresult knn_result;
     knn_result.nidx = malloc(m * k * sizeof(int));
-    knn_result.ndist = malloc(m * k * sizeof(int));
+    knn_result.ndist = malloc(m * k * sizeof(double));
 
     double *x_squared = malloc(n * d * sizeof(double));
     double *y_squared = malloc(m * d * sizeof(double));
