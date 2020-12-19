@@ -24,7 +24,7 @@ knnresult kNN(double * X, double * Y, int n, int m, int d, int k, int rank){
 
     knnresult knn_result;
     knn_result.nidx = malloc(m * k * sizeof(int));
-    knn_result.ndist = malloc(m * k * sizeof(int));
+    knn_result.ndist = malloc(m * k * sizeof(double));
 
     double *x_squared = malloc(n * d * sizeof(double));
     double *y_squared = malloc(m * d * sizeof(double));
@@ -105,18 +105,12 @@ knnresult kNN(double * X, double * Y, int n, int m, int d, int k, int rank){
                 }
             }
             // kati gamietai edw pera, ama ly8ei ayto 8a dakrysw apo sygkinhsh
-            // knn_result.ndist[kappa*m + i] = min;
-            // knn_result.nidx[kappa*m + i] = index;
+            knn_result.ndist[kappa*m + i] = min;
+            knn_result.nidx[kappa*m + i] = index;
+            // printf("%d %f\n", knn_result.nidx[kappa*m + i], knn_result.ndist[kappa*m + i]);
             d_matrix[index] =  INFINITY;
         }        
     }
-
-    // for(int i = 0; i < m* k; i++) {
-    //     knn_result.ndist[i] = 1;
-    //     knn_result.nidx[i] = 1;
-    // }
-
-
     return knn_result;
 }
 
@@ -140,7 +134,7 @@ void main() {
     int world_rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
-    int n = 100;
+    int n = 1000;
     int d = 2;
     int k = 3;
 
@@ -223,34 +217,6 @@ void main() {
         kNN(x_i_data, x_i_data, process_n, process_m, d, k, world_rank);
     }
     
-    
-
-    // if(world_rank == p-1) {
-    //     process_n = chunks + n % p;
-    //     process_m = chunks + n % p;
-    //     x_i_data =(double *)malloc(process_n * d * sizeof(double));
-    //     memcpy(x_i_data, x_data + world_rank * chunks * d, process_n * d);
-    //     // printf("world_rank: %d process_n %d\n",world_rank, process_n); 
-    //     // knnresult temp_knn = kNN(x_i_data, x_i_data, process_n, process_m, d, k, world_rank);
-    // }
-    // else {
-    //     process_n = chunks;
-    //     process_m = chunks;
-    //     x_i_data = (double *)malloc(process_n * d * sizeof(double));
-    //     memcpy(x_i_data, x_data + world_rank * chunks * d, process_n * d);
-    //     // printf("world_rank: %d process_n %d\n",world_rank, process_n);
-    //     // knnresult temp_knn = kNN(x_i_data, x_i_data, process_n, process_m, d, k, world_rank);
-    // }
-
-    // kNN(x_i_data, x_i_data, process_n, process_m, d, k, world_rank);
-
-    // printf("%d: x_i_data: %f process_n: %d process_m: %d\n", world_rank, x_i_data[process_n * d - 1], process_n, process_m);
-    
-
-    // for(int i = 0; i < process_n * d; i++) {
-    //     printf("%d %f\n", world_rank, x_i_data[i]);
-    // }
-
     // Finalize the MPI environment.
     MPI_Finalize();
 }
