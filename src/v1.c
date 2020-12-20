@@ -104,7 +104,6 @@ knnresult kNN(double * X, double * Y, int n, int m, int d, int k, int rank){
                     index = j * m + i;
                 }
             }
-            // kati gamietai edw pera, ama ly8ei ayto 8a dakrysw apo sygkinhsh
             knn_result.ndist[kappa*m + i] = min;
             knn_result.nidx[kappa*m + i] = index;
             // printf("%d %f\n", knn_result.nidx[kappa*m + i], knn_result.ndist[kappa*m + i]);
@@ -142,6 +141,7 @@ void main() {
     double* x_i_data;
     int process_n;
     int process_m;
+    int flag = -1;
 
     if(world_rank == 0) {
         knnresult knnResult;
@@ -215,6 +215,25 @@ void main() {
 
         // // After receiving the message we are ready to call kNN on our data
         kNN(x_i_data, x_i_data, process_n, process_m, d, k, world_rank);
+    }
+
+    // Every process has processed its own x_i_data, now they have to pass around data to each other in a ring mode
+    // That has to repeat until each process has processed all possible data aka p times
+
+    for(int i = 0; i < p; i ++) {
+        // Process zero sends first then waits for the last process
+        if(world_rank != 0) {
+            MPI_Recv(&flag, 1, MPI_INT, world_rank - 1, i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            printf("Process %d received flag %d from process %d\n", world_rank, flag, world_rank - 1);
+        }
+        else {
+            flag = i;
+        }
+        MPI_Send(&flag, 1, MPI_INT, (world_rank + 1) % p, i, MPI_COMM_WORLD);
+        if(world_rank == 0) {
+            MPI_Recv(&flag, 1, MPI_INT, p - 1, i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            printf("Process %d received flag %d from process %d\n", world_rank, flag, p - 1);
+        }
     }
     
     // Finalize the MPI environment.
