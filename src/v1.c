@@ -139,6 +139,7 @@ void main() {
 
     int chunks = n / p;
     double* x_i_data;
+    double* y_i_data;
     int process_n;
     int process_m;
     int flag = -1;
@@ -220,19 +221,28 @@ void main() {
     // Every process has processed its own x_i_data, now they have to pass around data to each other in a ring mode
     // That has to repeat until each process has processed all possible data aka p times
 
+    // For the first iteration set the y_i_data array that will be passed
+    process_m = chunks;
+    y_i_data = malloc(process_m * d * sizeof(double));
+    y_i_data = x_i_data;
+
     for(int i = 0; i < p; i ++) {
         // Process zero sends first then waits for the last process
         if(world_rank != 0) {
-            MPI_Recv(&flag, 1, MPI_INT, world_rank - 1, i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            printf("Process %d received flag %d from process %d\n", world_rank, flag, world_rank - 1);
+            process_m = chunks;
+            y_i_data = malloc(process_m * d * sizeof(double));
+            MPI_Recv(y_i_data, process_m * d, MPI_DOUBLE, world_rank - 1, i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);  
+            kNN(x_i_data, y_i_data, process_n, process_m, d, k, world_rank);          
         }
-        else {
-            flag = i;
-        }
-        MPI_Send(&flag, 1, MPI_INT, (world_rank + 1) % p, i, MPI_COMM_WORLD);
+        // else {
+        //     flag = i;
+        // }
+        MPI_Send(y_i_data, process_m * d, MPI_DOUBLE, (world_rank + 1) % p, i, MPI_COMM_WORLD);
         if(world_rank == 0) {
-            MPI_Recv(&flag, 1, MPI_INT, p - 1, i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            printf("Process %d received flag %d from process %d\n", world_rank, flag, p - 1);
+            process_m = chunks;
+            y_i_data = malloc(process_m * d * sizeof(double));
+            MPI_Recv(y_i_data, process_m * d, MPI_DOUBLE, p - 1, i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            kNN(x_i_data, y_i_data, process_n, process_m, d, k, world_rank);
         }
     }
     
