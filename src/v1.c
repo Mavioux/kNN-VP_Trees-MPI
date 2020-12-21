@@ -144,21 +144,9 @@ void main() {
     int process_m;
     int flag = -1;
 
-    if(world_rank == 0) {
-        knnresult knnResult;
-        knnResult.nidx = malloc(n * k * sizeof(int));
-        if(knnResult.nidx == NULL) {
-            printf("error allocating memory\n");
-            exit(0);
-        }
-        knnResult.ndist = malloc(n * k * sizeof(int));
-        if(knnResult.ndist == NULL) {
-            printf("error allocating memory\n");
-            exit(0);
-        }
-        knnResult.n = n;
-        knnResult.k = k;
+    knnresult sub_knnresult;
 
+    if(world_rank == 0) {
         srand(time(NULL));
 
         double* x_data = (double *)malloc(n * d * sizeof(double));
@@ -172,6 +160,7 @@ void main() {
             // x_data[i] = randomReal(0, 10);
             x_data[i] = 1;
         }
+
         if(p > 1) {
             //Broadcast to all other processes
             for(int i = 1; i < p-1; i++) {
@@ -185,66 +174,193 @@ void main() {
         //Initialize variables for zero process
         process_n = chunks;
         process_m = chunks;
-        x_i_data = malloc(process_n * d * sizeof(double));
+        x_i_data = malloc(process_m * d * sizeof(double));
         x_i_data = x_data;
-        kNN(x_i_data, x_i_data, process_n, process_m, d, k, world_rank);
+
+        sub_knnresult.k = k;
+        sub_knnresult.n = process_m;
+        sub_knnresult.ndist = malloc(process_m * k * sizeof(double));
+        sub_knnresult.nidx = malloc(process_m * k * sizeof(int));
+
+        sub_knnresult = kNN(x_i_data, x_i_data, process_n, process_m, d, k, world_rank);
     }
     else if (world_rank == p - 1)
     {
         //Initialize variables for this process
         process_n = (chunks + n % d);
         process_m = (chunks + n % d);
-        x_i_data = malloc(process_n * d * sizeof(double));
+        x_i_data = malloc(process_m * d * sizeof(double));
 
         // First receive from the mother process
-        MPI_Recv(x_i_data, process_n * d, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(x_i_data, process_m * d, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         // printf("%d %f\n",world_rank, x_i_data[0]);
 
-        // // After receiving the message we are ready to call kNN on our data
-        kNN(x_i_data, x_i_data, process_n, process_m, d, k, world_rank);
+        sub_knnresult.k = k;
+        sub_knnresult.n = process_m;
+        sub_knnresult.ndist = malloc(process_m * k * sizeof(double));
+        sub_knnresult.nidx = malloc(process_m * k * sizeof(int));
+
+        // After receiving the message we are ready to call kNN on our data
+        sub_knnresult = kNN(x_i_data, x_i_data, process_n, process_m, d, k, world_rank);       
+
     }
     else
     {
         //Initialize variables for this process
         process_n = chunks;
         process_m = chunks;
-        x_i_data = malloc(process_n * d * sizeof(double));
+        x_i_data = malloc(process_m * d * sizeof(double));
 
         // First receive from the mother process
-        MPI_Recv(x_i_data, process_n * d, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(x_i_data, process_m * d, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         // printf("%d %f\n", world_rank, x_i_data[0]);
 
+        sub_knnresult.k = k;
+        sub_knnresult.n = process_m;
+        sub_knnresult.ndist = malloc(process_m * k * sizeof(double));
+        sub_knnresult.nidx = malloc(process_m * k * sizeof(int));
+
         // // After receiving the message we are ready to call kNN on our data
-        kNN(x_i_data, x_i_data, process_n, process_m, d, k, world_rank);
+        sub_knnresult = kNN(x_i_data, x_i_data, process_n, process_m, d, k, world_rank);
     }
 
     // Every process has processed its own x_i_data, now they have to pass around data to each other in a ring mode
     // That has to repeat until each process has processed all possible data aka p times
 
     // For the first iteration set the y_i_data array that will be passed
-    process_m = chunks;
-    y_i_data = malloc(process_m * d * sizeof(double));
+    process_n = chunks;
+    y_i_data = malloc(process_n * d * sizeof(double));
     y_i_data = x_i_data;
 
     for(int i = 0; i < p; i ++) {
         // Process zero sends first then waits for the last process
         if(world_rank != 0) {
-            process_m = chunks;
-            y_i_data = malloc(process_m * d * sizeof(double));
-            MPI_Recv(y_i_data, process_m * d, MPI_DOUBLE, world_rank - 1, i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);  
-            kNN(x_i_data, y_i_data, process_n, process_m, d, k, world_rank);          
+            process_n = chunks;
+            y_i_data = malloc(process_n * d * sizeof(double));
+            MPI_Recv(y_i_data, process_n * d, MPI_DOUBLE, world_rank - 1, i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+            knnresult temp_knnresult;
+            temp_knnresult.ndist = malloc(process_m * k * sizeof(double));
+            temp_knnresult.nidx = malloc(process_m * k * sizeof(int));
+
+            temp_knnresult = kNN(y_i_data, x_i_data, process_n, process_m, d, k, world_rank);
+
+            // We have the sub_knnresult from the previous comparisons and the temp_knnresult from the last knn operation
+            // We have to store in the sub_knnresult the smallest values from both
+            for(int i = 0; i < process_m; i++) {
+                double temp_dist[k];
+                int temp_index[k];            
+                for(int kappa = 0; kappa < k; kappa++) {
+                    int kappa_one = 0;
+                    int kappa_two = 0;
+                    if(temp_knnresult.ndist[kappa_one*process_m + i] < sub_knnresult.ndist[kappa_two*process_m + i]) {
+                        temp_dist[kappa] = temp_knnresult.ndist[kappa_one*process_m + i];
+                        temp_index[kappa] = temp_knnresult.nidx[kappa_one*process_m + i];
+                        kappa_one++;
+                    }
+                    else
+                    {
+                        temp_dist[kappa] =  sub_knnresult.ndist[kappa_two*process_m + i];
+                        temp_index[kappa] =  sub_knnresult.nidx[kappa_two*process_m + i];
+                        kappa_two++;
+                    }
+                }
+                for(int kappa = 0; kappa < k; kappa++) {
+                    sub_knnresult.ndist[kappa*process_m + i] = temp_dist[i];
+                    sub_knnresult.nidx[kappa*process_m + i] = temp_index[i];
+                }             
+            }
+
+
+            // Don't forget to clear temp_knnresult after this comment
+            free(temp_knnresult.ndist);
+            free(temp_knnresult.nidx);
         }
-        // else {
-        //     flag = i;
-        // }
-        MPI_Send(y_i_data, process_m * d, MPI_DOUBLE, (world_rank + 1) % p, i, MPI_COMM_WORLD);
+        
+        MPI_Send(y_i_data, process_n * d, MPI_DOUBLE, (world_rank + 1) % p, i, MPI_COMM_WORLD);
         if(world_rank == 0) {
             process_m = chunks;
-            y_i_data = malloc(process_m * d * sizeof(double));
-            MPI_Recv(y_i_data, process_m * d, MPI_DOUBLE, p - 1, i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            kNN(x_i_data, y_i_data, process_n, process_m, d, k, world_rank);
+            y_i_data = malloc(process_n * d * sizeof(double));
+            MPI_Recv(y_i_data, process_n * d, MPI_DOUBLE, p - 1, i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            
+            knnresult temp_knnresult;
+            temp_knnresult.ndist = malloc(process_m * k * sizeof(double));
+            temp_knnresult.nidx = malloc(process_m * k * sizeof(int));
+
+            temp_knnresult = kNN(y_i_data, x_i_data, process_n, process_m, d, k, world_rank);
+
+            // We have the sub_knnresult from the previous comparisons and the temp_knnresult from the last knn operation
+            // We have to store in the sub_knnresult the smallest values from both
+            for(int i = 0; i < process_m; i++) {
+                double temp_dist[k];
+                int temp_index[k];            
+                for(int kappa = 0; kappa < k; kappa++) {
+                    int kappa_one = 0;
+                    int kappa_two = 0;
+                    if(temp_knnresult.ndist[kappa_one*process_m + i] < sub_knnresult.ndist[kappa_two*process_m + i]) {
+                        temp_dist[kappa] = temp_knnresult.ndist[kappa_one*process_m + i];
+                        temp_index[kappa] = temp_knnresult.nidx[kappa_one*process_m + i];
+                        kappa_one++;
+                    }
+                    else
+                    {
+                        temp_dist[kappa] =  sub_knnresult.ndist[kappa_two*process_m + i];
+                        temp_index[kappa] =  sub_knnresult.nidx[kappa_two*process_m + i];
+                        kappa_two++;
+                    }
+                }
+                for(int kappa = 0; kappa < k; kappa++) {
+                    sub_knnresult.ndist[kappa*process_m + i] = temp_dist[i];
+                    sub_knnresult.nidx[kappa*process_m + i] = temp_index[i];
+                }             
+            }
+
+            // Don't forget to clear temp_knnresult after this comment
+            free(temp_knnresult.ndist);
+            free(temp_knnresult.nidx);
         }
     }
+
+    // // Send the sub_knn_results to zero process
+    // if(world_rank != 0) {
+    //     MPI_Send(sub_knnresult.ndist, process_m * k, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+    //     // MPI_Send(sub_knnresult.nidx, process_m * k, MPI_INT, 0, 1, MPI_COMM_WORLD);
+    // }
+    // else {
+    //     knnresult knnResult;
+    //     knnResult.nidx = malloc(n * k * sizeof(int));
+    //     if(knnResult.nidx == NULL) {
+    //         printf("error allocating memory\n");
+    //         exit(0);
+    //     }
+    //     knnResult.ndist = malloc(n * k * sizeof(int));
+    //     if(knnResult.ndist == NULL) {
+    //         printf("error allocating memory\n");
+    //         exit(0);
+    //     }
+    //     knnResult.n = n;
+    //     knnResult.k = k;
+
+    //     for(int i = 1; i < p; i++) {
+    //         double *temp = malloc(process_m * k * sizeof(double));
+    //         MPI_Recv(temp, process_m * k, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    //         // Position the elements in the appropriate position of the knnResult.ndist array
+    //         // for(int j = 0; j < process_m; j++) {
+    //         //     for(int kappa = 0; kappa < k; k++) {
+    //         //         knnResult.ndist[i * process_m + j + kappa*n] = temp[j];
+    //         //     }
+    //         // }
+    //     }
+
+    //     // for(int i = 0; i < n; i++) {
+    //     //     if(i % n == 0) {
+    //     //         printf("\n");
+    //     //     }
+    //     //     printf("%f ", knnResult.ndist[i]);
+    //     // }
+    // }
+
+
     
     // Finalize the MPI environment.
     MPI_Finalize();
