@@ -133,7 +133,7 @@ void main() {
     int world_rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
-    int n = 1000;
+    int n = 100;
     int d = 2;
     int k = 3;
 
@@ -314,6 +314,14 @@ void main() {
                     sub_knnresult.nidx[kappa*process_m + i] = temp_index[i];
                 }             
             }
+            
+            for(int i = 0; i < process_m * k; i++) {
+                if(i % process_m == 0) {
+                    printf("\n");
+                }
+                printf("%f \n", sub_knnresult.ndist[i]);
+            }
+            
 
             // Don't forget to clear temp_knnresult after this comment
             free(temp_knnresult.ndist);
@@ -321,44 +329,48 @@ void main() {
         }
     }
 
-    // // Send the sub_knn_results to zero process
-    // if(world_rank != 0) {
-    //     MPI_Send(sub_knnresult.ndist, process_m * k, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
-    //     // MPI_Send(sub_knnresult.nidx, process_m * k, MPI_INT, 0, 1, MPI_COMM_WORLD);
-    // }
-    // else {
-    //     knnresult knnResult;
-    //     knnResult.nidx = malloc(n * k * sizeof(int));
-    //     if(knnResult.nidx == NULL) {
-    //         printf("error allocating memory\n");
-    //         exit(0);
-    //     }
-    //     knnResult.ndist = malloc(n * k * sizeof(int));
-    //     if(knnResult.ndist == NULL) {
-    //         printf("error allocating memory\n");
-    //         exit(0);
-    //     }
-    //     knnResult.n = n;
-    //     knnResult.k = k;
+    // Send the sub_knn_results to zero process
+    if(world_rank != 0) {
+        MPI_Send(sub_knnresult.ndist, process_m * k, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+    }
+    else {
+        knnresult knnResult;
+        knnResult.nidx = malloc(n * k * sizeof(int));
+        if(knnResult.nidx == NULL) {
+            printf("error allocating memory\n");
+            exit(0);
+        }
+        knnResult.ndist = malloc(n * k * sizeof(double));
+        if(knnResult.ndist == NULL) {
+            printf("error allocating memory\n");
+            exit(0);
+        }
+        knnResult.n = n;
+        knnResult.k = k;
+        for(int i = 1; i < p; i++) {
+            double *temp = malloc(process_m * k * sizeof(double));
+            MPI_Recv(temp, process_m * k, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            // for(int j = 0; j < process_m * k; j++) {
+            //     printf("%f\n", temp[j]);
+            // }
+            
+            // Position the elements in the appropriate position of the knnResult.ndist array
+            // for(int j = 0; j < process_m; j++) {
+            //     for(int kappa = 0; kappa < k; kappa++) {
+            //         knnResult.ndist[i * process_m + j + kappa*n] = temp[process_m * kappa + j];
+            //         printf("%d\n", i * process_m + j + kappa*n);
+            //         printf("%f\n", knnResult.ndist[i * process_m + j + kappa*n]);
+            //     }
+            // }
+        }
 
-    //     for(int i = 1; i < p; i++) {
-    //         double *temp = malloc(process_m * k * sizeof(double));
-    //         MPI_Recv(temp, process_m * k, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    //         // Position the elements in the appropriate position of the knnResult.ndist array
-    //         // for(int j = 0; j < process_m; j++) {
-    //         //     for(int kappa = 0; kappa < k; k++) {
-    //         //         knnResult.ndist[i * process_m + j + kappa*n] = temp[j];
-    //         //     }
-    //         // }
-    //     }
-
-    //     // for(int i = 0; i < n; i++) {
-    //     //     if(i % n == 0) {
-    //     //         printf("\n");
-    //     //     }
-    //     //     printf("%f ", knnResult.ndist[i]);
-    //     // }
-    // }
+        // for(int i = 0; i < n ; i++) {
+        //     if(i % n == 0) {
+        //         printf("\n");
+        //     }
+        //     printf("%f \n", knnResult.ndist[i]);
+        // }
+    }
 
 
     
