@@ -133,7 +133,7 @@ void main() {
     int world_rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
-    int n = 100;
+    int n = 10;
     int d = 2;
     int k = 3;
 
@@ -159,7 +159,7 @@ void main() {
         // Create an X array n x d
         for(int i = 0; i < n * d; i++) {
             // x_data[i] = randomReal(0, 10);
-            x_data[i] = 1;
+            x_data[i] = i;
         }
 
         if(p > 1) {
@@ -245,13 +245,21 @@ void main() {
 
 
         
-        MPI_Send(x_i_data, process_n * d, MPI_DOUBLE, (world_rank + 1) % p, i, MPI_COMM_WORLD);
-        // After sending the previous y data that the process holds, in the next iteration we want to send the new data we just received
-        y_i_send_data = y_i_receive_data;
+        MPI_Send(y_i_send_data, process_n * d, MPI_DOUBLE, (world_rank + 1) % p, i, MPI_COMM_WORLD);
+        if(world_rank != 0) {
+            // After sending the previous y data that the process holds, in the next iteration, we want to send the new data we just received
+            memcpy(y_i_send_data, y_i_receive_data, process_m * d * sizeof(double));
+        }
         if(world_rank == 0) {
             process_m = chunks;
             y_i_receive_data = malloc(process_n * d * sizeof(double));
             MPI_Recv(y_i_receive_data, process_n * d, MPI_DOUBLE, p - 1, i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            // After sending the previous y data that the process holds, in the next iteration, we want to send the new data we just received
+            memcpy(y_i_send_data, y_i_receive_data, process_m * d * sizeof(double));
+            // // Check that the copy is right
+            // for(int i = 0; i < process_m * d; i++) {
+            //     printf("%f\n", y_i_send_data[i]);
+            // }
         }
 
         knnresult temp_knnresult;
@@ -320,8 +328,6 @@ void main() {
             for(int j = 0; j < process_m; j++) {
                 for(int kappa = 0; kappa < k; kappa++) {
                     knnResult.ndist[i * process_m + j + kappa*n] = temp[process_m * kappa + j];
-                    printf("%d\n", i * process_m + j + kappa*n);
-                    printf("%f\n", knnResult.ndist[i * process_m + j + kappa*n]);
                 }
             }
         }
@@ -336,7 +342,7 @@ void main() {
             if(i % n == 0) {
                 printf("\n");
             }
-            printf("%d ", (int)knnResult.ndist[i]);
+            printf("%f ", knnResult.ndist[i]);
         }
     }
 
