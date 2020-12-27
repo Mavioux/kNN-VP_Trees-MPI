@@ -135,7 +135,7 @@ void main() {
 
     int n = 10;
     int d = 2;
-    int k = 3;
+    int k = 2;
 
     int chunks = n / p;
     double* x_i_data;
@@ -144,6 +144,7 @@ void main() {
     int process_n;
     int process_m;
     int flag = -1;
+    int knn_counter = 0;
 
     knnresult sub_knnresult;
 
@@ -183,7 +184,8 @@ void main() {
         sub_knnresult.ndist = malloc(process_m * k * sizeof(double));
         sub_knnresult.nidx = malloc(process_m * k * sizeof(int));
 
-        sub_knnresult = kNN(x_i_data, x_i_data, process_n, process_m, d, k, world_rank);
+        // IF WE UNCOMMENT THIS WE CALCULATE WITH OURSELVES TWICE
+        // sub_knnresult = kNN(x_i_data, x_i_data, process_n, process_m, d, k, world_rank);
     }
     else if (world_rank == p - 1)
     {
@@ -201,8 +203,9 @@ void main() {
         sub_knnresult.ndist = malloc(process_m * k * sizeof(double));
         sub_knnresult.nidx = malloc(process_m * k * sizeof(int));
 
-        // After receiving the message we are ready to call kNN on our data
-        sub_knnresult = kNN(x_i_data, x_i_data, process_n, process_m, d, k, world_rank);       
+        // IF WE UNCOMMENT THIS WE CALCULATE WITH OURSELVES TWICE
+        // // After receiving the message we are ready to call kNN on our data
+        // sub_knnresult = kNN(x_i_data, x_i_data, process_n, process_m, d, k, world_rank);       
 
     }
     else
@@ -221,8 +224,9 @@ void main() {
         sub_knnresult.ndist = malloc(process_m * k * sizeof(double));
         sub_knnresult.nidx = malloc(process_m * k * sizeof(int));
 
+        // IF WE UNCOMMENT THIS WE CALCULATE WITH OURSELVES TWICE
         // // After receiving the message we are ready to call kNN on our data
-        sub_knnresult = kNN(x_i_data, x_i_data, process_n, process_m, d, k, world_rank);
+        // sub_knnresult = kNN(x_i_data, x_i_data, process_n, process_m, d, k, world_rank);
     }
 
     // Every process has processed its own x_i_data, now they have to pass around data to each other in a ring mode
@@ -231,7 +235,8 @@ void main() {
     // For the first iteration set the y_i_send_data array that will be passed
     process_n = chunks;
     y_i_send_data = malloc(process_n * d * sizeof(double));
-    y_i_send_data = x_i_data;
+    //REALLY IMPORTANT NOT TO SET THE POINTERS EQUAL HERE
+    memcpy(y_i_send_data, x_i_data, process_m * d * sizeof(double));
 
     // TODO: IMPLEMENT THE SEND AND RECEIVE AS DIFFERENT POINTERS TO DOUBLE ARRAYS
 
@@ -266,41 +271,97 @@ void main() {
         temp_knnresult.ndist = malloc(process_m * k * sizeof(double));
         temp_knnresult.nidx = malloc(process_m * k * sizeof(int));
 
-        temp_knnresult = kNN(y_i_receive_data, x_i_data, process_n, process_m, d, k, world_rank);
-
-        // THERE USED A BUG IN THE CODE BELOW
-        // I THINK I SOLVED IT THOUGH
-
-        // We have the sub_knnresult from the previous comparisons and the temp_knnresult from the last knn operation
-        // We have to store in the sub_knnresult the smallest values from both
-        for(int i = 0; i < process_m; i++) {
-            double temp_dist[k];
-            int temp_index[k];            
-            for(int kappa = 0; kappa < k; kappa++) {
-                int kappa_one = 0;
-                int kappa_two = 0;
-                if(temp_knnresult.ndist[kappa_one*process_m + i] < sub_knnresult.ndist[kappa_two*process_m + i]) {
-                    temp_dist[kappa] = temp_knnresult.ndist[kappa_one*process_m + i];
-                    temp_index[kappa] = temp_knnresult.nidx[kappa_one*process_m + i];
-                    kappa_one++;
-                }
-                else
-                {
-                    temp_dist[kappa] =  sub_knnresult.ndist[kappa_two*process_m + i];
-                    temp_index[kappa] =  sub_knnresult.nidx[kappa_two*process_m + i];
-                    kappa_two++;
-                }
+        if(world_rank == 1) {
+            printf("x_i_data\n");
+            for(int i = 0; i < process_m * d; i++) {
+                printf("%f\n", x_i_data[i]);
             }
-            for(int kappa = 0; kappa < k; kappa++) {
-                sub_knnresult.ndist[kappa*process_m + i] = temp_dist[kappa];
-                sub_knnresult.nidx[kappa*process_m + i] = temp_index[kappa];
-            }             
+            printf("y_i_receive_data\n");
+            for(int i = 0; i < process_m * d; i++) {
+                printf("%f\n", y_i_receive_data[i]);
+            }
         }
+        
+        if(!knn_counter) {
+            // First call of knn so we store the result in the permanent sub_knnresult
+            sub_knnresult = kNN(y_i_receive_data, x_i_data, process_n, process_m, d, k, world_rank);
+            knn_counter++;
+        }
+        else {
+            temp_knnresult = kNN(y_i_receive_data, x_i_data, process_n, process_m, d, k, world_rank);
+            // We have the sub_knnresult from the previous comparisons and the temp_knnresult from the last knn operation
+            // We have to store in the sub_knnresult the smallest values from both
+            for(int i = 0; i < process_m; i++) {
+                double temp_dist[k];
+                int temp_index[k];    
+                int kappa_one = 0;
+                int kappa_two = 0;        
+                for(int kappa = 0; kappa < k; kappa++) {
+                    if(temp_knnresult.ndist[kappa_one*process_m + i] < sub_knnresult.ndist[kappa_two*process_m + i]) {
+                        if(world_rank == 1)
+                            printf("kappa_one*process_m + i: %d\n", kappa_one*process_m + i);
+                        temp_dist[kappa] = temp_knnresult.ndist[kappa_one*process_m + i];
+                        temp_index[kappa] = temp_knnresult.nidx[kappa_one*process_m + i];
+                        kappa_one++;
+                    }
+                    else
+                    {
+                        if(world_rank == 1)
+                            printf("kappa_two*process_m + i: %d\n", kappa_two*process_m + i);
+                        temp_dist[kappa] =  sub_knnresult.ndist[kappa_two*process_m + i];
+                        temp_index[kappa] =  sub_knnresult.nidx[kappa_two*process_m + i];
+                        kappa_two++;
+                    }
+                    if(world_rank == 1) {
+                        printf("kappa_one: %d\n", kappa_one);
+                        printf("kappa_two: %d\n", kappa_two);
+                    }
+                }
+                // if(world_rank == 1) {
+                //     for(int i = 0; i < process_m * k; i++) {
+                //         printf("%f\n", temp_dist[i]);
+                //     }
+                //     printf("\n");
+                // }
+                for(int kappa = 0; kappa < k; kappa++) {
+                    sub_knnresult.ndist[kappa*process_m + i] = temp_dist[kappa];
+                    sub_knnresult.nidx[kappa*process_m + i] = temp_index[kappa];
+                }             
+            }
 
-        // Don't forget to clear temp_knnresult after this comment
-        free(temp_knnresult.ndist);
-        free(temp_knnresult.nidx);
+            if(world_rank == 1) {
+                printf("SUB KNN RESULT\n");
+                for(int i = 0; i < process_m * k; i++) {
+                    printf("%f\n", sub_knnresult.ndist[i]);
+                }
+                printf("\n");
+            }
+            // Don't forget to clear temp_knnresult after this comment
+            free(temp_knnresult.ndist);
+            free(temp_knnresult.nidx);
+
+            // if(world_rank == 1) {
+            //     for(int i = 0; i < process_m * k; i++) {
+            //         printf("%f\n", temp_knnresult.ndist[i]);
+            //     }
+            // }
+            // printf("\n");
+
+            if(world_rank == 1) {
+                printf("\n");
+                for(int i = 0; i < process_m * k; i++) {
+                    printf("%f\n", temp_knnresult.ndist[i]);
+                }
+                printf("\n");
+            }
+        }                
     }
+
+    // if(world_rank == 1) {
+    //     for(int i = 0; i < process_m * k; i++) {
+    //         printf("%f\n", sub_knnresult.ndist[i]);
+    //     }
+    // }
 
     // Send the sub_knn_results to zero process
     if(world_rank != 0) {
@@ -338,11 +399,12 @@ void main() {
             }
         }
 
+        printf("FINAL KNN");
         for(int i = 0; i < n * k ; i++) {
-            if(i % n == 0) {
-                printf("\n");
-            }
-            printf("%f ", knnResult.ndist[i]);
+            // if(i % n == 0) {
+                // printf("\n");
+            // }
+            printf("%f \n", knnResult.ndist[i]);
         }
     }
 
