@@ -133,9 +133,9 @@ void main() {
     int world_rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
-    int n = 10;
+    int n = 20;
     int d = 2;
-    int k = 2;
+    int k = 3;
 
     int chunks = n / p;
     double* x_i_data;
@@ -238,8 +238,6 @@ void main() {
     //REALLY IMPORTANT NOT TO SET THE POINTERS EQUAL HERE
     memcpy(y_i_send_data, x_i_data, process_m * d * sizeof(double));
 
-    // TODO: IMPLEMENT THE SEND AND RECEIVE AS DIFFERENT POINTERS TO DOUBLE ARRAYS
-
     for(int i = 0; i < p; i ++) {
         // Process zero sends first then waits for the last process
         if(world_rank != 0) {
@@ -271,16 +269,16 @@ void main() {
         temp_knnresult.ndist = malloc(process_m * k * sizeof(double));
         temp_knnresult.nidx = malloc(process_m * k * sizeof(int));
 
-        if(world_rank == 1) {
-            printf("x_i_data\n");
-            for(int i = 0; i < process_m * d; i++) {
-                printf("%f\n", x_i_data[i]);
-            }
-            printf("y_i_receive_data\n");
-            for(int i = 0; i < process_m * d; i++) {
-                printf("%f\n", y_i_receive_data[i]);
-            }
-        }
+        // if(world_rank == 1) {
+        //     printf("x_i_data\n");
+        //     for(int i = 0; i < process_m * d; i++) {
+        //         printf("%f\n", x_i_data[i]);
+        //     }
+        //     printf("y_i_receive_data\n");
+        //     for(int i = 0; i < process_m * d; i++) {
+        //         printf("%f\n", y_i_receive_data[i]);
+        //     }
+        // }
         
         if(!knn_counter) {
             // First call of knn so we store the result in the permanent sub_knnresult
@@ -298,24 +296,24 @@ void main() {
                 int kappa_two = 0;        
                 for(int kappa = 0; kappa < k; kappa++) {
                     if(temp_knnresult.ndist[kappa_one*process_m + i] < sub_knnresult.ndist[kappa_two*process_m + i]) {
-                        if(world_rank == 1)
-                            printf("kappa_one*process_m + i: %d\n", kappa_one*process_m + i);
+                        // if(world_rank == 1)
+                        //     printf("kappa_one*process_m + i: %d\n", kappa_one*process_m + i);
                         temp_dist[kappa] = temp_knnresult.ndist[kappa_one*process_m + i];
                         temp_index[kappa] = temp_knnresult.nidx[kappa_one*process_m + i];
                         kappa_one++;
                     }
                     else
                     {
-                        if(world_rank == 1)
-                            printf("kappa_two*process_m + i: %d\n", kappa_two*process_m + i);
+                        // if(world_rank == 1)
+                        //     printf("kappa_two*process_m + i: %d\n", kappa_two*process_m + i);
                         temp_dist[kappa] =  sub_knnresult.ndist[kappa_two*process_m + i];
                         temp_index[kappa] =  sub_knnresult.nidx[kappa_two*process_m + i];
                         kappa_two++;
                     }
-                    if(world_rank == 1) {
-                        printf("kappa_one: %d\n", kappa_one);
-                        printf("kappa_two: %d\n", kappa_two);
-                    }
+                    // if(world_rank == 1) {
+                    //     printf("kappa_one: %d\n", kappa_one);
+                    //     printf("kappa_two: %d\n", kappa_two);
+                    // }
                 }
                 // if(world_rank == 1) {
                 //     for(int i = 0; i < process_m * k; i++) {
@@ -329,13 +327,13 @@ void main() {
                 }             
             }
 
-            if(world_rank == 1) {
-                printf("SUB KNN RESULT\n");
-                for(int i = 0; i < process_m * k; i++) {
-                    printf("%f\n", sub_knnresult.ndist[i]);
-                }
-                printf("\n");
-            }
+            // if(world_rank == 1) {
+            //     printf("SUB KNN RESULT\n");
+            //     for(int i = 0; i < process_m * k; i++) {
+            //         printf("%f\n", sub_knnresult.ndist[i]);
+            //     }
+            //     printf("\n");
+            // }
             // Don't forget to clear temp_knnresult after this comment
             free(temp_knnresult.ndist);
             free(temp_knnresult.nidx);
@@ -347,13 +345,13 @@ void main() {
             // }
             // printf("\n");
 
-            if(world_rank == 1) {
-                printf("\n");
-                for(int i = 0; i < process_m * k; i++) {
-                    printf("%f\n", temp_knnresult.ndist[i]);
-                }
-                printf("\n");
-            }
+            // if(world_rank == 1) {
+            //     printf("\n");
+            //     for(int i = 0; i < process_m * k; i++) {
+            //         printf("%f\n", temp_knnresult.ndist[i]);
+            //     }
+            //     printf("\n");
+            // }
         }                
     }
 
@@ -386,16 +384,21 @@ void main() {
             MPI_Recv(temp, process_m * k, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             
             // Position the elements in the appropriate position of the knnResult.ndist array
+            printf("\n");
             for(int j = 0; j < process_m; j++) {
                 for(int kappa = 0; kappa < k; kappa++) {
+                    printf("%f\n", temp[process_m * kappa + j]);
                     knnResult.ndist[i * process_m + j + kappa*n] = temp[process_m * kappa + j];
+                    printf("%d\n", i * process_m + j + kappa*n);
                 }
             }
         }
         // For i = 0
         for(int j = 0; j < process_m; j++) {
             for(int kappa = 0; kappa < k; kappa++) {
+                printf("%f\n", sub_knnresult.ndist[process_m * kappa + j]);
                 knnResult.ndist[j + kappa*n] = sub_knnresult.ndist[process_m * kappa + j];
+                printf("%d\n", j + kappa*n);
             }
         }
 
