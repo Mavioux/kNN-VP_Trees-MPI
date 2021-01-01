@@ -18,10 +18,18 @@ typedef struct knnresult{
   int      k;       //!< Number of nearest neighbors            [scalar]
 } knnresult;
 
+typedef struct minArray {
+    int* nidx;
+    double* ndist;
+} minArray;
+
 typedef struct node {
     double* data;
     double* up;
+    int up_index;
     double mu;
+    int left_size;
+    int right_size;
     struct node* left;
     struct node* right;
 } node;
@@ -38,7 +46,7 @@ typedef struct node {
 //     return node;
 // }
 
-void vpt_create(double* x_i_data, node* root, int m, int d) {
+node* vpt_create(double* x_i_data, node* root, int m, int d) {
     
     if(m == 0) {
         // root = malloc(sizeof(node));
@@ -46,7 +54,7 @@ void vpt_create(double* x_i_data, node* root, int m, int d) {
         // for(int i = 0; i < d; i++) {
         //     root->up[i] = x_i_data[i];
         // }
-        return;
+        return NULL;
     }
 
     // Choosing the root node
@@ -70,14 +78,9 @@ void vpt_create(double* x_i_data, node* root, int m, int d) {
     for(int i = 1; i < m; i++) {
         double temp_sum = 0;
         for(int j = 0; j < d; j++){
-            temp_sum += x_i_data[j] * x_i_data[j] - x_i_data[i*d + j] * x_i_data[i*d + j];
+            temp_sum += (x_i_data[j] - x_i_data[i*d + j]) * (x_i_data[j] - x_i_data[i*d + j]);
         }
-        if(temp_sum<0) {
-            temp_sum = -sqrt(abs(temp_sum));
-        }
-        else {
-            temp_sum = sqrt(temp_sum);
-        }
+        temp_sum = sqrt(abs(temp_sum));
         // printf("%f\n\n", temp_sum);
         sum += temp_sum;
     }
@@ -88,57 +91,100 @@ void vpt_create(double* x_i_data, node* root, int m, int d) {
     for(int i = 1; i < m; i++) {
         double temp_sum = 0;
         for(int j = 0; j < d; j++){
-            temp_sum += x_i_data[j] * x_i_data[j] - x_i_data[i*d + j] * x_i_data[i*d + j];
+            // We could store those beforehand
+            temp_sum += (x_i_data[j] - x_i_data[i*d + j]) * (x_i_data[j] - x_i_data[i*d + j]);
         }
-        if(temp_sum<0) {
-            temp_sum = -sqrt(abs(temp_sum));
-        }
-        else {
-            temp_sum = sqrt(temp_sum);
-        }
+        temp_sum = sqrt(abs(temp_sum));
         // printf("temp_sum: %f\tsum: %f \n\n", temp_sum, root->mu);
         if(temp_sum < root->mu) {
             left_size++;
+            root->left_size = left_size;
             root->left->data = realloc(root->left->data, d * left_size * sizeof(double));
             for(int j = 0; j < d; j++) {
                 root->left->data[(left_size-1) * d + j] = x_i_data[i*d + j];
-            }  
+            }
         }
         else {
             right_size++;
+            root->right_size = right_size;
             root->right->data = realloc(root->right->data, d * right_size * sizeof(double));
             for(int j = 0; j < d; j++) {
                 root->right->data[(right_size-1) * d + j] = x_i_data[i*d + j];
-            }  
+            }
         }
     }
 
-    printf("\nRoot\n");
+    // printf("\nRoot\n");
+    // for(int j = 0; j < d; j++) {
+    //     printf("%f\n", root->up[j]);
+    // }
+    // printf("\nLeft Child\n");
+    // for(int i = 0; i < left_size; i++) {
+    //     for(int j = 0; j < d; j++) {
+    //         printf("%f\n", root->left->data[i*d+j]);
+    //     }
+    //     printf("\n");
+    // }
+    // printf("\nRight Child\n");
+    // for(int i = 0; i < right_size; i++) {
+    //     for(int j = 0; j < d; j++) {
+    //         printf("%f\n", root->right->data[i*d+j]);
+    //     }
+    //     printf("\n");
+    // }
+
+    root->left = vpt_create(root->left->data, root->left, left_size, d);
+    root->right = vpt_create(root->right->data, root->right, right_size, d);
+    return root;
+}
+
+void search_vpt(double* x_query, node* root, int d, int k,  minArray* min_array) {
+
+    if(root == NULL) {
+        // This means that the previous root was a leaf so we have nowhere else to go to
+        return;
+    }
+
+    // Calculate the distance from the root vantage point
+    double distance = 0;
     for(int j = 0; j < d; j++) {
-        printf("%f\n", root->up[j]);
+        distance += root->up[j] * root->up[j] - x_query[j] * x_query[j];
     }
-    printf("\nLeft Child\n");
-    for(int i = 0; i < left_size; i++) {
-        for(int j = 0; j < d; j++) {
-            printf("%f\n", root->left->data[i*d+j]);
+    distance = sqrt(abs(distance));
+
+    for(int i = 0; i < k; i++) {
+        if(distance < min_array->ndist[i]) {
+            double temp_dist;
+            double temp_ind;
+            for(int j = i; j < k-1; j++) {
+                temp_dist = min_array->ndist[j];
+                temp_ind = min_array->nidx[j];
+                min_array->ndist[j] = distance;
+                min_array->nidx[j] = root->up_index;
+                min_array->ndist[j+1] = temp_dist;
+                min_array->nidx[j+1] = temp_ind;
+            }
         }
-        printf("\n");
     }
-    printf("\nRight Child\n");
-    for(int i = 0; i < right_size; i++) {
-        for(int j = 0; j < d; j++) {
-            printf("%f\n", root->right->data[i*d+j]);
+
+    // Find the radius
+    double radius = INFINITY;
+    for(int i = k - 1; i > -1; i++) {
+        if(min_array->ndist[i] != INFINITY) {
+            radius = min_array->ndist[i];
+            break;
         }
-        printf("\n");
     }
 
-    
-
-
-
-    vpt_create(root->left->data, root->left, left_size, d);
-    vpt_create(root->right->data, root->right, right_size, d);
-
+    // Compare distance to mu
+    if(distance < root->mu - radius) {
+        // Search the left child
+        search_vpt(x_query, root->left, d, k, min_array);
+    }
+    else if(distance > root->mu + radius) {
+        // Search the right child
+        search_vpt(x_query, root->right, d, k, min_array);
+    }
 }
 
 double randomReal(double low, double high) {
@@ -201,7 +247,7 @@ void main() {
         }
 
         // After sending the message and receiving confirmation we are ready to call kNN on our data
-        //Initialize variables for zero process
+        // Initialize variables for zero process
         process_n = chunks;
         process_m = chunks;
         x_i_data = malloc(process_m * d * sizeof(double));
@@ -212,9 +258,39 @@ void main() {
         sub_knnresult.ndist = malloc(process_m * k * sizeof(double));
         sub_knnresult.nidx = malloc(process_m * k * sizeof(int));
 
+        // // Initialize sub_knnresult
+        // for(int i = 0; i < process_m * k; i ++) {
+        //     sub_knnresult.ndist = INFINITY;
+        //     sub_knnresult.nidx = -1;
+        // }
+
         // We can now create the vpt tree of the elements of process zero
         node* root;
-        vpt_create(x_i_data, root, process_m, d);
+        root = malloc(sizeof(node));
+        root = vpt_create(x_i_data, root, process_m, d);
+
+        node* current_node = root;
+
+        minArray* min_array = malloc(sizeof(minArray));
+        min_array->ndist = malloc(k * sizeof(double));
+        min_array->nidx = malloc(k * sizeof(int));
+
+        
+
+        // Prepare the x_query
+        double* x_query = malloc(d * sizeof(float));
+        for(int i = 0; i < 1; i++) {
+            // Initialize min_array
+            for(int j = 0; j < k; j++) {
+                min_array->ndist[j] = INFINITY;
+                min_array->nidx[j] = -1;
+            }
+            for(int j = 0; j < d; j++) {
+                x_query[j] = x_i_data[i * d + j];
+            }
+            search_vpt(x_query, root, d, k, min_array);
+            printf("%f \n",min_array->ndist[1]);
+        }   
     }
     else if (world_rank == p - 1)
     {
