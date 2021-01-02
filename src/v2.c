@@ -148,24 +148,28 @@ void search_vpt(double* x_query, node* root, int d, int k,  minArray* min_array)
     // Calculate the distance from the root vantage point
     double distance = 0;
     for(int j = 0; j < d; j++) {
-        distance += root->up[j] * root->up[j] - x_query[j] * x_query[j];
+        distance += (root->up[j] - x_query[j]) * (root->up[j] - x_query[j]);
     }
     distance = sqrt(abs(distance));
 
     for(int i = 0; i < k; i++) {
         if(distance < min_array->ndist[i]) {
-            double temp_dist;
-            double temp_ind;
-            for(int j = i; j < k-1; j++) {
-                temp_dist = min_array->ndist[j];
-                temp_ind = min_array->nidx[j];
-                min_array->ndist[j] = distance;
-                min_array->nidx[j] = root->up_index;
-                min_array->ndist[j+1] = temp_dist;
-                min_array->nidx[j+1] = temp_ind;
+            for(int j = k - 1; j < i + 1; j++) {
+                min_array->ndist[j] = min_array->ndist[j-1];
+                min_array->nidx[j] = min_array->nidx[j-1];
             }
+            min_array->ndist[i] = distance;
+            min_array->nidx[i] = root->up_index;
+            break;
         }
     }
+
+    // printf("Min dist array\n");
+    // for (int i = 0; i < k; i++)
+    // {
+    //     printf("%f\n", min_array->ndist[i]);
+    // }
+    
 
     // Find the radius
     double radius = INFINITY;
@@ -179,10 +183,12 @@ void search_vpt(double* x_query, node* root, int d, int k,  minArray* min_array)
     // Compare distance to mu
     if(distance < root->mu - radius) {
         // Search the left child
+        printf("Searching left child\n");
         search_vpt(x_query, root->left, d, k, min_array);
     }
     else if(distance > root->mu + radius) {
         // Search the right child
+        printf("Searching right child\n");
         search_vpt(x_query, root->right, d, k, min_array);
     }
 }
@@ -264,7 +270,7 @@ void main() {
         //     sub_knnresult.nidx = -1;
         // }
 
-        // We can now create the vpt tree of the elements of process zero
+        // We can now create the vp tree of the elements of process zero
         node* root;
         root = malloc(sizeof(node));
         root = vpt_create(x_i_data, root, process_m, d);
@@ -289,7 +295,12 @@ void main() {
                 x_query[j] = x_i_data[i * d + j];
             }
             search_vpt(x_query, root, d, k, min_array);
-            printf("%f \n",min_array->ndist[1]);
+            for (int l = 0; l < k; l++)
+            {
+                printf("%f \n",min_array->ndist[l]);
+            }
+            // Now we have to save the min_array result to the correct sub_knnresult positions
+            
         }   
     }
     else if (world_rank == p - 1)
