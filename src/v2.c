@@ -172,21 +172,21 @@ void search_vpt(double* x_query, node* root, int d, int k,  minArray* min_array)
     
 
     // Find the radius
-    double radius = INFINITY;
-    for(int i = k - 1; i > -1; i++) {
-        if(min_array->ndist[i] != INFINITY) {
-            radius = min_array->ndist[i];
-            break;
-        }
-    }
+    double radius = min_array->ndist[k-1];
+    // for(int i = k - 1; i > -1; i++) {
+    //     if(min_array->ndist[i] != INFINITY) {
+    //         radius = min_array->ndist[i];
+    //         break;
+    //     }
+    // }
 
     // Compare distance to mu
-    if(distance < root->mu - radius) {
+    if(distance < root->mu + radius) {
         // Search the left child
         printf("Searching left child\n");
         search_vpt(x_query, root->left, d, k, min_array);
     }
-    else if(distance > root->mu + radius) {
+    if(distance >= root->mu - radius) {
         // Search the right child
         printf("Searching right child\n");
         search_vpt(x_query, root->right, d, k, min_array);
@@ -285,7 +285,7 @@ void main() {
 
         // Prepare the x_query
         double* x_query = malloc(d * sizeof(float));
-        for(int i = 0; i < 1; i++) {
+        for(int i = 0; i < process_m; i++) {
             // Initialize min_array
             for(int j = 0; j < k; j++) {
                 min_array->ndist[j] = INFINITY;
@@ -300,8 +300,20 @@ void main() {
                 printf("%f \n",min_array->ndist[l]);
             }
             // Now we have to save the min_array result to the correct sub_knnresult positions
-            
-        }   
+            for(int j = 0; j < k; j++) {
+                sub_knnresult.ndist[j * process_m + i] = min_array->ndist[j];
+                sub_knnresult.nidx[j * process_m + i] = min_array->nidx[j];
+            }            
+        } 
+
+        for (int i = 0; i < k * process_m; i++)
+        {
+            if(i % process_m == 0) 
+                printf("\n");
+
+            printf("%f ", sub_knnresult.ndist[i]);
+        }
+          
     }
     else if (world_rank == p - 1)
     {
