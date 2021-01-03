@@ -215,6 +215,9 @@ void main() {
 
     knnresult sub_knnresult;
 
+    node* root;
+    minArray* min_array;
+
     if(world_rank == 0) {
         srand(time(NULL));
 
@@ -226,8 +229,8 @@ void main() {
 
         // Create an X array n x d
         for(int i = 0; i < n * d; i++) {
-            // x_data[i] = randomReal(0, 100);
-            x_data[i] = i;
+            x_data[i] = randomReal(0, 100);
+            // x_data[i] = i;
         }
 
         if(p > 1) {
@@ -258,17 +261,14 @@ void main() {
         // }
 
         // We can now create the vp tree of the elements of process zero
-        node* root;
         root = malloc(sizeof(node));
         root = vpt_create(x_i_data, root, process_m, d);
 
         node* current_node = root;
 
-        minArray* min_array = malloc(sizeof(minArray));
+        min_array = malloc(sizeof(minArray));
         min_array->ndist = malloc(k * sizeof(double));
-        min_array->nidx = malloc(k * sizeof(int));
-
-        
+        min_array->nidx = malloc(k * sizeof(int));        
 
         // Prepare the x_query
         double* x_query = malloc(d * sizeof(float));
@@ -296,6 +296,7 @@ void main() {
 
         //     printf("%f ", sub_knnresult.ndist[i]);
         // }
+        // printf("\n");
           
     }
     else if (world_rank == p - 1)
@@ -314,17 +315,14 @@ void main() {
         sub_knnresult.nidx = malloc(process_m * k * sizeof(int));   
 
         // We can now create the vp tree of the elements of process zero
-        node* root;
         root = malloc(sizeof(node));
         root = vpt_create(x_i_data, root, process_m, d);
 
         node* current_node = root;
 
-        minArray* min_array = malloc(sizeof(minArray));
+        min_array = malloc(sizeof(minArray));
         min_array->ndist = malloc(k * sizeof(double));
-        min_array->nidx = malloc(k * sizeof(int));
-
-        
+        min_array->nidx = malloc(k * sizeof(int));        
 
         // Prepare the x_query
         double* x_query = malloc(d * sizeof(float));
@@ -343,7 +341,16 @@ void main() {
                 sub_knnresult.ndist[j * process_m + i] = min_array->ndist[j];
                 sub_knnresult.nidx[j * process_m + i] = min_array->nidx[j];
             }            
-        } 
+        }
+
+        // for (int i = 0; i < k * process_m; i++)
+        // {
+        //     if(i % process_m == 0) 
+        //         printf("\n");
+
+        //     printf("%f ", sub_knnresult.ndist[i]);
+        // }
+        // printf("\n");
     }
     else
     {
@@ -361,20 +368,17 @@ void main() {
         sub_knnresult.nidx = malloc(process_m * k * sizeof(int));
 
         // We can now create the vp tree of the elements of process zero
-        node* root;
         root = malloc(sizeof(node));
         root = vpt_create(x_i_data, root, process_m, d);
 
         node* current_node = root;
 
-        minArray* min_array = malloc(sizeof(minArray));
+        min_array = malloc(sizeof(minArray));
         min_array->ndist = malloc(k * sizeof(double));
-        min_array->nidx = malloc(k * sizeof(int));
-
-        
+        min_array->nidx = malloc(k * sizeof(int));        
 
         // Prepare the x_query
-        double* x_query = malloc(d * sizeof(float));
+        double* x_query = malloc(d * sizeof(double));
         for(int i = 0; i < process_m; i++) {
             // Initialize min_array
             for(int j = 0; j < k; j++) {
@@ -390,7 +394,16 @@ void main() {
                 sub_knnresult.ndist[j * process_m + i] = min_array->ndist[j];
                 sub_knnresult.nidx[j * process_m + i] = min_array->nidx[j];
             }            
-        } 
+        }
+
+        // for (int i = 0; i < k * process_m; i++)
+        // {
+        //     if(i % process_m == 0) 
+        //         printf("\n");
+
+        //     printf("%f ", sub_knnresult.ndist[i]);
+        // }
+        // printf("\n");
     }
 
     // Every process has processed its own x_i_data
@@ -399,77 +412,79 @@ void main() {
     // Now they have to pass around data to each other in a ring mode
     // That has to repeat until each process has processed all possible data aka p times
 
-    // // For the first iteration set the y_i_send_data array that will be passed
-    // process_n = chunks;
-    // y_i_send_data = malloc(process_n * d * sizeof(double));
-    // //REALLY IMPORTANT NOT TO SET THE POINTERS EQUAL HERE
-    // memcpy(y_i_send_data, x_i_data, process_m * d * sizeof(double));
+    // For the first iteration set the y_i_send_data array that will be passed
+    process_n = chunks;
+    process_m = chunks;
+    y_i_send_data = malloc(process_n * d * sizeof(double));
+    double* sub_knn_result_ndist_send = malloc(process_m * k * sizeof(double));
+    int* sub_knn_result_nidx_send = malloc(process_m * k * sizeof(int));
+    //REALLY IMPORTANT NOT TO SET THE POINTERS EQUAL HERE
+    memcpy(y_i_send_data, x_i_data, process_m * d * sizeof(double));
+    memcpy(sub_knn_result_ndist_send, sub_knnresult.ndist, process_m * k * sizeof(double));
+    memcpy(sub_knn_result_nidx_send, sub_knnresult.nidx, process_m * k * sizeof(int));
 
-    // for(int i = 0; i < p; i ++) {
-    //     // Process zero sends first then waits for the last process
-    //     if(world_rank != 0) {
-    //         process_n = chunks;
-    //         y_i_receive_data = malloc(process_n * d * sizeof(double));
-    //         MPI_Recv(y_i_receive_data, process_n * d, MPI_DOUBLE, world_rank - 1, i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    //     }
-
-
+    for(int i = 0; i < p-1; i ++) {
+        // Process zero sends first then waits for the last process
+        if(world_rank != 0) {
+            process_n = chunks;
+            y_i_receive_data = malloc(process_n * d * sizeof(double));
+            MPI_Recv(y_i_receive_data, process_n * d, MPI_DOUBLE, world_rank - 1, i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            MPI_Recv(sub_knnresult.ndist, process_m * k, MPI_DOUBLE, world_rank - 1, i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            MPI_Recv(sub_knnresult.nidx, process_m * k, MPI_INT, world_rank - 1, i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        }
         
-    //     MPI_Send(y_i_send_data, process_n * d, MPI_DOUBLE, (world_rank + 1) % p, i, MPI_COMM_WORLD);
-    //     if(world_rank != 0) {
-    //         // After sending the previous y data that the process holds, in the next iteration, we want to send the new data we just received
-    //         memcpy(y_i_send_data, y_i_receive_data, process_m * d * sizeof(double));
-    //     }
-    //     if(world_rank == 0) {
-    //         process_m = chunks;
-    //         y_i_receive_data = malloc(process_n * d * sizeof(double));
-    //         MPI_Recv(y_i_receive_data, process_n * d, MPI_DOUBLE, p - 1, i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    //         // After sending the previous y data that the process holds, in the next iteration, we want to send the new data we just received
-    //         memcpy(y_i_send_data, y_i_receive_data, process_m * d * sizeof(double));
-    //     }
+        MPI_Send(y_i_send_data, process_n * d, MPI_DOUBLE, (world_rank + 1) % p, i, MPI_COMM_WORLD);
+        MPI_Send(sub_knn_result_ndist_send, process_m * k, MPI_DOUBLE, (world_rank + 1) % p, i, MPI_COMM_WORLD);
+        MPI_Send(sub_knn_result_nidx_send, process_m * k, MPI_INT, (world_rank + 1) % p, i, MPI_COMM_WORLD);
+        if(world_rank != 0) {
+            // After sending the previous y data that the process holds, in the next iteration, we want to send the new data we just received
+            memcpy(y_i_send_data, y_i_receive_data, process_m * d * sizeof(double));
+        }
+        if(world_rank == 0) {
+            process_m = chunks;
+            y_i_receive_data = malloc(process_n * d * sizeof(double));
+            MPI_Recv(y_i_receive_data, process_n * d, MPI_DOUBLE, p - 1, i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            MPI_Recv(sub_knnresult.ndist, process_m * k, MPI_DOUBLE, p - 1, i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            MPI_Recv(sub_knnresult.nidx, process_m * k, MPI_INT, p - 1, i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            // After sending the previous y data that the process holds, in the next iteration, we want to send the new data we just received
+            memcpy(y_i_send_data, y_i_receive_data, process_m * d * sizeof(double));
+        }
 
-    //     knnresult temp_knnresult;
-    //     temp_knnresult.ndist = malloc(process_m * k * sizeof(double));
-    //     temp_knnresult.nidx = malloc(process_m * k * sizeof(int));
-        
-    //     if(!knn_counter) {
-    //         // First call of knn so we store the result in the permanent sub_knnresult
-    //         sub_knnresult = kNN(y_i_receive_data, x_i_data, process_n, process_m, d, k, world_rank);
-    //         knn_counter++;
-    //     }
-    //     else {
-    //         temp_knnresult = kNN(y_i_receive_data, x_i_data, process_n, process_m, d, k, world_rank);
-    //         // We have the sub_knnresult from the previous comparisons and the temp_knnresult from the last knn operation
-    //         // We have to store in the sub_knnresult the smallest values from both
-    //         for(int i = 0; i < process_m; i++) {
-    //             double temp_dist[k];
-    //             int temp_index[k];    
-    //             int kappa_one = 0;
-    //             int kappa_two = 0;        
-    //             for(int kappa = 0; kappa < k; kappa++) {
-    //                 if(temp_knnresult.ndist[kappa_one*process_m + i] < sub_knnresult.ndist[kappa_two*process_m + i]) {
-    //                     temp_dist[kappa] = temp_knnresult.ndist[kappa_one*process_m + i];
-    //                     temp_index[kappa] = temp_knnresult.nidx[kappa_one*process_m + i];
-    //                     kappa_one++;
-    //                 }
-    //                 else
-    //                 {
-    //                     temp_dist[kappa] =  sub_knnresult.ndist[kappa_two*process_m + i];
-    //                     temp_index[kappa] =  sub_knnresult.nidx[kappa_two*process_m + i];
-    //                     kappa_two++;
-    //                 }
-    //             }
-    //             for(int kappa = 0; kappa < k; kappa++) {
-    //                 sub_knnresult.ndist[kappa*process_m + i] = temp_dist[kappa];
-    //                 sub_knnresult.nidx[kappa*process_m + i] = temp_index[kappa];
-    //             }             
-    //         }
+        // Prepare the x_query
+        double* x_query = malloc(d * sizeof(double));
+        for(int i = 0; i < process_m; i++) {
+            // Initialize min_array
+            for(int j = 0; j < k; j++) {
+                min_array->ndist[j] = sub_knnresult.ndist[j * process_m + i];
+                min_array->nidx[j] = sub_knnresult.nidx[j * process_m + i];
+            }
+            for(int j = 0; j < d; j++) {
+                x_query[j] = y_i_receive_data[i * d + j];
+            }
+            search_vpt(x_query, root, d, k, min_array);
+            // Now we have to save the min_array result to the correct sub_knnresult positions
+            for(int j = 0; j < k; j++) {
+                sub_knnresult.ndist[j * process_m + i] = min_array->ndist[j];
+                sub_knnresult.nidx[j * process_m + i] = min_array->nidx[j];
+            }            
+        }
 
-    //         // Don't forget to clear temp_knnresult after this comment
-    //         free(temp_knnresult.ndist);
-    //         free(temp_knnresult.nidx);
-    //     }                
-    // }
+        memcpy(sub_knn_result_ndist_send, sub_knnresult.ndist, process_m * k * sizeof(double));
+        memcpy(sub_knn_result_nidx_send, sub_knnresult.nidx, process_m * k * sizeof(int));
+
+        // if(world_rank == 0) {
+        //     for (int i = 0; i < k * process_m; i++)
+        //     {
+        //         if(i % process_m == 0) 
+        //             printf("\n");
+
+        //         printf("%f ", sub_knnresult.ndist[i]);
+        //     }
+        //     printf("\n");
+        // }
+                
+    }
+
 
     // // Send the sub_knn_results to zero process
     // if(world_rank != 0) {
@@ -506,7 +521,26 @@ void main() {
     //             knnResult.ndist[j + kappa*n] = sub_knnresult.ndist[process_m * kappa + j];
     //         }
     //     }
+
+    //     for (int i = 0; i < k * n; i++)
+    //     {
+    //         if(i % n == 0) 
+    //             printf("\n");
+
+    //         printf("%f ", sub_knnresult.ndist[i]);
+    //     }
+    //     printf("\n");
     // }
+
+   
+    // for (int i = 0; i < k * process_m; i++)
+    // {
+    //     if(i % process_m == 0) 
+    //         printf("\n");
+
+    //     printf("%f ", sub_knnresult.ndist[i]);
+    // }
+    // printf("%d\n", world_rank);
 
     // Finalize the MPI environment.
     MPI_Finalize();
