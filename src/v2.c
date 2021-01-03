@@ -170,12 +170,12 @@ void search_vpt(double* x_query, node* root, int d, int k,  minArray* min_array)
     // Compare distance to mu
     if(distance < root->mu + radius) {
         // Search the left child
-        printf("Searching left child\n");
+        // printf("Searching left child\n");
         search_vpt(x_query, root->left, d, k, min_array);
     }
     if(distance >= root->mu - radius) {
         // Search the right child
-        printf("Searching right child\n");
+        // printf("Searching right child\n");
         search_vpt(x_query, root->right, d, k, min_array);
     }
 }
@@ -282,10 +282,6 @@ void main() {
                 x_query[j] = x_i_data[i * d + j];
             }
             search_vpt(x_query, root, d, k, min_array);
-            for (int l = 0; l < k; l++)
-            {
-                printf("%f \n",min_array->ndist[l]);
-            }
             // Now we have to save the min_array result to the correct sub_knnresult positions
             for(int j = 0; j < k; j++) {
                 sub_knnresult.ndist[j * process_m + i] = min_array->ndist[j];
@@ -293,13 +289,13 @@ void main() {
             }            
         } 
 
-        for (int i = 0; i < k * process_m; i++)
-        {
-            if(i % process_m == 0) 
-                printf("\n");
+        // for (int i = 0; i < k * process_m; i++)
+        // {
+        //     if(i % process_m == 0) 
+        //         printf("\n");
 
-            printf("%f ", sub_knnresult.ndist[i]);
-        }
+        //     printf("%f ", sub_knnresult.ndist[i]);
+        // }
           
     }
     else if (world_rank == p - 1)
@@ -316,6 +312,38 @@ void main() {
         sub_knnresult.n = process_m;
         sub_knnresult.ndist = malloc(process_m * k * sizeof(double));
         sub_knnresult.nidx = malloc(process_m * k * sizeof(int));   
+
+        // We can now create the vp tree of the elements of process zero
+        node* root;
+        root = malloc(sizeof(node));
+        root = vpt_create(x_i_data, root, process_m, d);
+
+        node* current_node = root;
+
+        minArray* min_array = malloc(sizeof(minArray));
+        min_array->ndist = malloc(k * sizeof(double));
+        min_array->nidx = malloc(k * sizeof(int));
+
+        
+
+        // Prepare the x_query
+        double* x_query = malloc(d * sizeof(float));
+        for(int i = 0; i < process_m; i++) {
+            // Initialize min_array
+            for(int j = 0; j < k; j++) {
+                min_array->ndist[j] = INFINITY;
+                min_array->nidx[j] = -1;
+            }
+            for(int j = 0; j < d; j++) {
+                x_query[j] = x_i_data[i * d + j];
+            }
+            search_vpt(x_query, root, d, k, min_array);
+            // Now we have to save the min_array result to the correct sub_knnresult positions
+            for(int j = 0; j < k; j++) {
+                sub_knnresult.ndist[j * process_m + i] = min_array->ndist[j];
+                sub_knnresult.nidx[j * process_m + i] = min_array->nidx[j];
+            }            
+        } 
     }
     else
     {
@@ -331,6 +359,38 @@ void main() {
         sub_knnresult.n = process_m;
         sub_knnresult.ndist = malloc(process_m * k * sizeof(double));
         sub_knnresult.nidx = malloc(process_m * k * sizeof(int));
+
+        // We can now create the vp tree of the elements of process zero
+        node* root;
+        root = malloc(sizeof(node));
+        root = vpt_create(x_i_data, root, process_m, d);
+
+        node* current_node = root;
+
+        minArray* min_array = malloc(sizeof(minArray));
+        min_array->ndist = malloc(k * sizeof(double));
+        min_array->nidx = malloc(k * sizeof(int));
+
+        
+
+        // Prepare the x_query
+        double* x_query = malloc(d * sizeof(float));
+        for(int i = 0; i < process_m; i++) {
+            // Initialize min_array
+            for(int j = 0; j < k; j++) {
+                min_array->ndist[j] = INFINITY;
+                min_array->nidx[j] = -1;
+            }
+            for(int j = 0; j < d; j++) {
+                x_query[j] = x_i_data[i * d + j];
+            }
+            search_vpt(x_query, root, d, k, min_array);
+            // Now we have to save the min_array result to the correct sub_knnresult positions
+            for(int j = 0; j < k; j++) {
+                sub_knnresult.ndist[j * process_m + i] = min_array->ndist[j];
+                sub_knnresult.nidx[j * process_m + i] = min_array->nidx[j];
+            }            
+        } 
     }
 
     // Every process has processed its own x_i_data
