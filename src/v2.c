@@ -143,7 +143,7 @@ void search_vpt(double* x_query, node* root, int d, int k,  minArray* min_array)
     if(root == NULL) {
         // This means that the previous root was a leaf so we have nowhere else to go to
         return;
-    }
+    } 
 
     // Calculate the distance from the root vantage point
     double distance = 0;
@@ -154,7 +154,7 @@ void search_vpt(double* x_query, node* root, int d, int k,  minArray* min_array)
 
     for(int i = 0; i < k; i++) {
         if(distance < min_array->ndist[i]) {
-            for(int j = k - 1; j < i + 1; j++) {
+            for(int j = k - 1; j > i; j--) {
                 min_array->ndist[j] = min_array->ndist[j-1];
                 min_array->nidx[j] = min_array->nidx[j-1];
             }
@@ -164,21 +164,8 @@ void search_vpt(double* x_query, node* root, int d, int k,  minArray* min_array)
         }
     }
 
-    // printf("Min dist array\n");
-    // for (int i = 0; i < k; i++)
-    // {
-    //     printf("%f\n", min_array->ndist[i]);
-    // }
-    
-
     // Find the radius
     double radius = min_array->ndist[k-1];
-    // for(int i = k - 1; i > -1; i++) {
-    //     if(min_array->ndist[i] != INFINITY) {
-    //         radius = min_array->ndist[i];
-    //         break;
-    //     }
-    // }
 
     // Compare distance to mu
     if(distance < root->mu + radius) {
@@ -239,7 +226,7 @@ void main() {
 
         // Create an X array n x d
         for(int i = 0; i < n * d; i++) {
-            // x_data[i] = randomReal(0, 10);
+            // x_data[i] = randomReal(0, 100);
             x_data[i] = i;
         }
 
