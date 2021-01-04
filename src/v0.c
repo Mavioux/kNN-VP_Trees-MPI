@@ -3,6 +3,7 @@
 #include <time.h>
 #include <cblas.h>
 #include <math.h>
+#include <sys/time.h>
 
 #ifndef RAND_MAX
 #define RAND_MAX ((int) ((unsigned) ~0 >> 1))
@@ -61,7 +62,7 @@ knnresult kNN(double * X, double * Y, int n, int m, int d, int k){
             sum += d_matrix[j + m*i];
         }
     }
-    printf("%f\n", sum);
+    // printf("%f\n", sum);
 
     // We have in our hands the D matrix in row major format
     // Next we have to search each column for the kNN    
@@ -92,10 +93,10 @@ double randomReal(double low, double high) {
 }
 
 void main() {
-    int n = 10;
-    int d = 2;
-    int m = 4;
-    int k = 3;
+    int n = 10000;
+    int d = 20;
+    int m = 10000;
+    int k = 5;
     knnresult knnresult;
     knnresult.nidx = malloc(m * k * sizeof(int));
     knnresult.ndist = malloc(m * k * sizeof(int));
@@ -120,5 +121,14 @@ void main() {
         // y_data[i] = 1;
     }
 
-    knnresult =  kNN(x_data, y_data, n, m, d, k);       
+    // Start measuring time
+    clock_t begin = clock();
+
+    knnresult =  kNN(x_data, y_data, n, m, d, k);  
+
+    // Stop measuring time  
+    clock_t end = clock();
+    double duration = (double)(end - begin) / CLOCKS_PER_SEC;
+    
+    printf("Duration: %f\n", duration);
 }
