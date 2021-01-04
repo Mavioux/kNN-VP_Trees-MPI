@@ -92,11 +92,19 @@ double randomReal(double low, double high) {
     return (low + d * (high - low));
 }
 
-void main() {
-    int n = 10000;
-    int d = 20;
-    int m = 10000;
-    int k = 5;
+void main(int argc, char **argv) {
+    // argv[1] = n
+    // argv[2] = d
+    // argv[3] = k
+    // argv[4] = m
+    int n = atoi(argv[1]);
+    int d = atoi(argv[2]);
+    int m = atoi(argv[4]);
+    int k = atoi(argv[3]);
+    printf("n: %d\n", n);
+    printf("d: %d\n", d);
+    printf("k: %d\n", k);
+    printf("m: %d\n", m);
     knnresult knnresult;
     knnresult.nidx = malloc(m * k * sizeof(int));
     knnresult.ndist = malloc(m * k * sizeof(int));
