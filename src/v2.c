@@ -229,8 +229,8 @@ void main() {
 
         // Create an X array n x d
         for(int i = 0; i < n * d; i++) {
-            x_data[i] = randomReal(0, 100);
-            // x_data[i] = i;
+            // x_data[i] = randomReal(0, 100);
+            x_data[i] = i;
         }
 
         if(p > 1) {
@@ -533,14 +533,14 @@ void main() {
     // }
 
    
-    // for (int i = 0; i < k * process_m; i++)
-    // {
-    //     if(i % process_m == 0) 
-    //         printf("\n");
+    for (int i = 0; i < k * process_m; i++)
+    {
+        if(i % process_m == 0) 
+            printf("\n");
 
-    //     printf("%f ", sub_knnresult.ndist[i]);
-    // }
-    // printf("%d\n", world_rank);
+        printf("%f ", sub_knnresult.ndist[i]);
+    }
+    printf("%d\n", world_rank);
 
     // Finalize the MPI environment.
     MPI_Finalize();
