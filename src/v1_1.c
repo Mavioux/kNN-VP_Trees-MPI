@@ -5,6 +5,7 @@
 #include <math.h>
 #include <mpi.h>
 #include <string.h>
+#include <sys/time.h>
 
 #ifndef RAND_MAX
 #define RAND_MAX ((int) ((unsigned) ~0 >> 1))
@@ -99,7 +100,7 @@ double randomReal(double low, double high) {
     return (low + d * (high - low));
 }
 
-void main() {
+void main(int argc, char **argv) {
     // MPI
     // Initialize the MPI environment
     MPI_Init(NULL, NULL);
@@ -112,9 +113,12 @@ void main() {
     int world_rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
-    int n = 1000;
-    int d = 2;
-    int k = 3;
+    int n = atoi(argv[1]);
+    int d = atoi(argv[2]);
+    int k = atoi(argv[3]);
+
+    clock_t begin;
+    clock_t end;
 
     int chunks = n / p;
     double* x_i_data;
@@ -130,6 +134,10 @@ void main() {
     if(world_rank == 0) {
         srand(time(NULL));
 
+        printf("n: %d\n", n);
+        printf("d: %d\n", d);
+        printf("k: %d\n", k);
+
         double* x_data = (double *)malloc(n * d * sizeof(double));
         if(x_data == NULL) {
             printf("error allocating memory\n");
@@ -141,6 +149,10 @@ void main() {
             // x_data[i] = randomReal(0, 10);
             x_data[i] = 2*i;
         }
+
+        // Start measuring time
+        begin = clock();
+
 
         if(p > 1) {
             //Broadcast to all other processes
@@ -295,9 +307,9 @@ void main() {
             printf("\n");
             for(int j = 0; j < process_m; j++) {
                 for(int kappa = 0; kappa < k; kappa++) {
-                    printf("%f\n", temp[process_m * kappa + j]);
+                    // printf("%f\n", temp[process_m * kappa + j]);
                     knnResult.ndist[i * process_m + j + kappa*n] = temp[process_m * kappa + j];
-                    printf("%d\n", i * process_m + j + kappa*n);
+                    // printf("%d\n", i * process_m + j + kappa*n);
                 }
             }
         }
@@ -312,6 +324,10 @@ void main() {
         // for(int i = 0; i < n * k ; i++) {
         //     printf("%d %f \n",i, knnResult.ndist[i]);
         // }
+
+        end = clock();
+        double duration = (double)(end - begin) / CLOCKS_PER_SEC;
+        printf("Duration: %f\n", duration);
     }
 
     // Finalize the MPI environment.
