@@ -161,7 +161,7 @@ void main(int argc, char **argv) {
                 // MPI_Send to each process the appropriate array
                 MPI_Send(&x_data[i * chunks * d], chunks * d, MPI_DOUBLE, i, 0, MPI_COMM_WORLD);
             }
-            MPI_Send(&x_data[(p-1) * chunks * d], (chunks + n % d) * d, MPI_DOUBLE, p-1, 0, MPI_COMM_WORLD);
+            MPI_Send(&x_data[(p-1) * chunks * d], (chunks + n % p) * d, MPI_DOUBLE, p-1, 0, MPI_COMM_WORLD);
         }
 
         // After sending the message and receiving confirmation we are ready to call kNN on our data
@@ -179,8 +179,8 @@ void main(int argc, char **argv) {
     else if (world_rank == p - 1)
     {
         //Initialize variables for this process
-        process_n = (chunks + n % d);
-        process_m = (chunks + n % d);
+        process_n = (chunks + n % p);
+        process_m = (chunks + n % p);
         x_i_data = malloc(process_m * d * sizeof(double));
 
         // First receive from the mother process
