@@ -137,6 +137,7 @@ void main(int argc, char **argv) {
         printf("n: %d\n", n);
         printf("d: %d\n", d);
         printf("k: %d\n", k);
+        printf("Processes: %d\n", p);
 
         double* x_data = (double *)malloc(n * d * sizeof(double));
         if(x_data == NULL) {

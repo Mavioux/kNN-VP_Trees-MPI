@@ -105,6 +105,7 @@ void main(int argc, char **argv) {
     printf("d: %d\n", d);
     printf("k: %d\n", k);
     printf("m: %d\n", m);
+    printf("Processes: 1\n");
     knnresult knnresult;
     knnresult.nidx = malloc(m * k * sizeof(int));
     knnresult.ndist = malloc(m * k * sizeof(int));
