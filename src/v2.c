@@ -187,7 +187,7 @@ double randomReal(double low, double high) {
     return (low + d * (high - low));
 }
 
-void main() {
+void main(int argc, char **argv) {
     // MPI
     // Initialize the MPI environment
     MPI_Init(NULL, NULL);
@@ -200,9 +200,9 @@ void main() {
     int world_rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
-    int n = 20;
-    int d = 2;
-    int k = 3;
+    int n = atoi(argv[1]);
+    int d = atoi(argv[2]);
+    int k = atoi(argv[3]);
 
     int chunks = n / p;
     double* x_i_data;
@@ -220,6 +220,10 @@ void main() {
 
     if(world_rank == 0) {
         srand(time(NULL));
+        printf("n: %d\n", n);
+        printf("d: %d\n", d);
+        printf("k: %d\n", k);
+        printf("Processes: %d\n", p);
 
         double* x_data = (double *)malloc(n * d * sizeof(double));
         if(x_data == NULL) {
@@ -239,7 +243,7 @@ void main() {
                 // MPI_Send to each process the appropriate array
                 MPI_Send(&x_data[i * chunks * d], chunks * d, MPI_DOUBLE, i, 0, MPI_COMM_WORLD);
             }
-            MPI_Send(&x_data[(p-1) * chunks * d], (chunks + n % d) * d, MPI_DOUBLE, p-1, 0, MPI_COMM_WORLD);
+            MPI_Send(&x_data[(p-1) * chunks * d], (chunks + n % p) * d, MPI_DOUBLE, p-1, 0, MPI_COMM_WORLD);
         }
 
         // After sending the message and receiving confirmation we are ready to call kNN on our data
@@ -302,8 +306,8 @@ void main() {
     else if (world_rank == p - 1)
     {
         //Initialize variables for this process
-        process_n = (chunks + n % d);
-        process_m = (chunks + n % d);
+        process_n = (chunks + n % p);
+        process_m = (chunks + n % p);
         x_i_data = malloc(process_m * d * sizeof(double));
 
         // First receive from the mother process
@@ -533,14 +537,14 @@ void main() {
     // }
 
    
-    for (int i = 0; i < k * process_m; i++)
-    {
-        if(i % process_m == 0) 
-            printf("\n");
+    // for (int i = 0; i < k * process_m; i++)
+    // {
+    //     if(i % process_m == 0) 
+    //         printf("\n");
 
-        printf("%f ", sub_knnresult.ndist[i]);
-    }
-    printf("%d\n", world_rank);
+    //     printf("%f ", sub_knnresult.ndist[i]);
+    // }
+    // printf("%d\n", world_rank);
 
     // Finalize the MPI environment.
     MPI_Finalize();
