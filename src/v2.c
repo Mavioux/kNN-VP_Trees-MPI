@@ -5,6 +5,7 @@
 #include <math.h>
 #include <mpi.h>
 #include <string.h>
+#include <sys/time.h>
 
 #ifndef RAND_MAX
 #define RAND_MAX ((int) ((unsigned) ~0 >> 1))
@@ -215,6 +216,9 @@ void main(int argc, char **argv) {
 
     knnresult sub_knnresult;
 
+    clock_t begin;
+    clock_t end;
+
     node* root;
     minArray* min_array;
 
@@ -236,6 +240,9 @@ void main(int argc, char **argv) {
             // x_data[i] = randomReal(0, 100);
             x_data[i] = i;
         }
+
+        // Start measuring time
+        begin = clock();
 
         if(p > 1) {
             //Broadcast to all other processes
@@ -487,6 +494,21 @@ void main(int argc, char **argv) {
         //     printf("\n");
         // }
                 
+    }
+
+    // Signal to zero process that everything has finished calculating
+    int token;
+    if (world_rank != 0) {
+        MPI_Send(&token, 1, MPI_INT,0, 0, MPI_COMM_WORLD);
+    }
+    else{
+        for(int i = 1; i < p; i ++) {
+            MPI_Recv(&token, 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        }
+        // Stop the timer
+        end = clock();
+        double duration = (double)(end - begin) / CLOCKS_PER_SEC;
+        printf("Duration: %f\n", duration);        
     }
 
 
