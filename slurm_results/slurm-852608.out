@@ -1,0 +1,29 @@
+[cn9:17160] *** An error occurred in MPI_Recv
+[cn9:17160] *** reported by process [41943040,0]
+[cn9:17160] *** on communicator MPI_COMM_WORLD
+[cn9:17160] *** MPI_ERR_TRUNCATE: message truncated
+[cn9:17160] *** MPI_ERRORS_ARE_FATAL (processes in this communicator will now abort,
+[cn9:17160] ***    and potentially your MPI job)
+n: 110000
+d: 20
+k: 15
+Processes: 15
+
+
+
+
+
+
+
+
+
+
+
+
+
+slurmstepd: error: *** STEP 852608.0 ON cn9 CANCELLED AT 2021-01-06T05:26:06 ***
+srun: error: cn9: task 0: Exited with exit code 15
+srun: Terminating job step 852608.0
+srun: error: cn9: tasks 1-13: Killed
+srun: error: cn9: task 14: Killed
+srun: Force Terminated job step 852608.0

@@ -1,0 +1,29 @@
+[cn9:18257] *** An error occurred in MPI_Recv
+[cn9:18257] *** reported by process [42139648,0]
+[cn9:18257] *** on communicator MPI_COMM_WORLD
+[cn9:18257] *** MPI_ERR_TRUNCATE: message truncated
+[cn9:18257] *** MPI_ERRORS_ARE_FATAL (processes in this communicator will now abort,
+[cn9:18257] ***    and potentially your MPI job)
+n: 110000
+d: 25
+k: 7
+Processes: 15
+
+
+
+
+
+
+
+
+
+
+
+
+
+slurmstepd: error: *** STEP 852611.0 ON cn9 CANCELLED AT 2021-01-06T05:32:56 ***
+srun: error: cn9: task 0: Exited with exit code 15
+srun: Terminating job step 852611.0
+srun: error: cn9: tasks 1-13: Killed
+srun: error: cn9: task 14: Killed
+srun: Force Terminated job step 852611.0
