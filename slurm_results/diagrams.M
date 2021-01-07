@@ -14,8 +14,8 @@ A = table2array(T(:,1:5));
 legend_string = [];
 
 % n = 20000  p = 2
-k = 161;
-while k <= 161 + 16
+k = 117;
+while k <=117 + 16
     % disp(k);
     counter = 1;
     d = k;
@@ -36,5 +36,5 @@ while k <= 161 + 16
     k = k + 4;
 end
 
-title("n = 45.000  p = 15");
-legend(['k = ' num2str(A(1,2))], ['k = ' num2str(A(5,2))], ['k = ' num2str(A(9,2))], ['k = ' num2str(A(13,2))], ['k = ' num2str(A(17,2))], 'Location','northwest');
+title("n = 90.000  p = 15");
+legend(['k = ' num2str(A(1,2))], ['k = ' num2str(A(5,2))], ['k = ' num2str(A(9,2))], ['k = ' num2str(A(13,2))], ['k = ' num2str(A(17,2))], 'Location','southeast');
