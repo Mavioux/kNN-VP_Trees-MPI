@@ -282,7 +282,7 @@ void main(int argc, char **argv) {
         min_array->nidx = malloc(k * sizeof(int));        
 
         // Prepare the x_query
-        double* x_query = malloc(d * sizeof(float));
+        double* x_query = malloc(d * sizeof(double));
         for(int i = 0; i < process_m; i++) {
             // Initialize min_array
             for(int j = 0; j < k; j++) {
@@ -336,7 +336,7 @@ void main(int argc, char **argv) {
         min_array->nidx = malloc(k * sizeof(int));        
 
         // Prepare the x_query
-        double* x_query = malloc(d * sizeof(float));
+        double* x_query = malloc(d * sizeof(double));
         for(int i = 0; i < process_m; i++) {
             // Initialize min_array
             for(int j = 0; j < k; j++) {
