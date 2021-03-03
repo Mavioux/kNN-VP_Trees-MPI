@@ -24,11 +24,11 @@
 
 ![alt text](/diagrams/v1/n=20000p=2.jpg "Diagram")
 ![alt text](/diagrams/v1/n=20000p=4.jpg "Diagram")
-![alt text](/diagrams/v1/n=500000=4.jpg "Diagram")
+![alt text](/diagrams/v1/n=50000p=4.jpg "Diagram")
 ![alt text](/diagrams/v1/n=32000p=8.jpg "Diagram")
-![alt text](/diagrams/v1/n=640000=8.jpg "Diagram")
-![alt text](/diagrams/v1/n=600000=15.jpg "Diagram")
-![alt text](/diagrams/v1/n=900000=15.jpg "Diagram")
+![alt text](/diagrams/v1/n=64000p=8.jpg "Diagram")
+![alt text](/diagrams/v1/n=60000p=15.jpg "Diagram")
+![alt text](/diagrams/v1/n=90000p=15.jpg "Diagram")
 
 Από τα παραπάνω διαγράμματα διαπιστώνουμε πως και για το V1, ανεξαρτήτως του αριθμού των επεξεργαστών που χρησιμοποιούνται στον υπολογισμό,τη μεγαλύτερη επίπτωση (αν όχι και τη μοναδική) στο χρόνο εκτέλεσης έχει ο παράγοντας k, όπως παρατηρείται και στο V0.Επίσης, καταλήγουμε στα συμπεράσματαπως για ίσο αριθμό στοιχείων nαλλά για αυξημένο αριθμό επεξεργαστών, υπάρχει μείωση στον χρόνο, αλλά για το αντίθετο, δηλαδή σταθερό αριθμό επεξεργαστών και αυξημένο n, παρατηρείται αύξηση στον χρόνο εκτέλεσης.Κάνοντας, τέλος, και την μονή δυνατή σύγκριση του V1 με το V0 για n=20000, παρατηρούμε πως το V1 εμφανίζει αρκετά μικρότερους χρόνους.
 
@@ -36,11 +36,11 @@
 
 ![alt text](/diagrams/v2/n=20000p=2.jpg "Diagram")
 ![alt text](/diagrams/v2/n=20000p=4.jpg "Diagram")
-![alt text](/diagrams/v2/n=500000=4.jpg "Diagram")
-![alt text](/diagrams/v2/n=640000=4.jpg "Diagram")
+![alt text](/diagrams/v2/n=50000p=4.jpg "Diagram")
+![alt text](/diagrams/v2/n=64000p=4.jpg "Diagram")
 ![alt text](/diagrams/v2/n=32000p=8.jpg "Diagram")
-![alt text](/diagrams/v2/n=640000=8.jpg "Diagram")
-![alt text](/diagrams/v2/n=600000=15.jpg "Diagram")
-![alt text](/diagrams/v2/n=900000=15.jpg "Diagram")
+![alt text](/diagrams/v2/n=64000p=8.jpg "Diagram")
+![alt text](/diagrams/v2/n=60000p=15.jpg "Diagram")
+![alt text](/diagrams/v2/n=90000p=15.jpg "Diagram")
 
 Από τα παραπάνω διαγράμματα βλέπουμε αρχικά πωςγια τα ίδια ακριβώς πειράματα με το V2 έχουμε πολύ χαμηλότερους χρόνους σε σχέση με την V1 υλοποίηση!Ακόμη παρατηρούμε ότι η επίδραση του παράγοντα k(ιδίως για d>7) αρχίζει και γίνεται αμελητέα. 
