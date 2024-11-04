@@ -1,24 +1,24 @@
 # Parallel-And-Distributed-Systems-Exercise-2
 
-## Ανάλυση αλγορίθμου V0
+## Algorithm V0 analysis
 
-Η σειριακή αναζήτηση των k κοντινότερων γειτόνων απαιτούσε την απλή εφαρμογή του τύπου που δινόταν. Μέσω της συνάρτησης cblas_dgemm έγινε ο πολλαπλασιασμός των X, Y και με απλές επαναλήψεις στα περιεχόμενα των X, Y υπολογίστηκε ο τελικός πίνακας D. Στη συνέχεια, εξίσου σημαντικός ήταν και ο κώδικας αναζήτησης των k κοντινότερων γειτόνων με αναζήτηση στον πίνακα D και θέτοντας ίσες με άπειρο τις τιμές που ήδη επιλέχθηκαν. Με τον τρόπο αυτόν επιστρέφεται το τελικό knnresultstruct με τους πίνακες των κοντινότερων γειτόνων και κοντινότερων αποστάσεων για κάθε στοιχείο του Y με βάση τον αρχικό πίνακα X.
+The serial search of the K-Nearest Neighbours required the simple application of the formula given. Through the function cblas_dgemm the multiplication of X, Y was performed and by simple iterations on the contents of X, Y the final matrix D was computed. Then, equally important was the code to search for the k nearest neighbours by searching the matrix D and setting the already selected values equal to infinity. This returned the final `knnresultstruct` with the nearest neighbour and nearest distance tables for each element of Y based on the original matrix X.
 
-## Ανάλυση αλγορίθμου V1
+## Algorithm V1 analysis
 
-Σε αυτήν την έκδοση του αλγορίθμου ο υπολογισμός του τελικού knnresultγινόταν συγχρόνως με χρήση πολλών επεξεργαστών, διαμοιράζοντας ουσιαστικά το πρόβλημα σε pυποπροβλήματα. Αρχικά, ο πίνακας των Xήταν γνωστός μόνο στο μηδενικό επεξεργαστή και διαμοίραζε υποπίνακες του Χ σε κάθε επεξεργαστή.Αυτό επετεύχθη μέσω ενός forloopπου διαμοίραζε το κατάλληλο σημείο (Pointer) του αρχικού πίνακα και το εύρος τιμών, προκειμένου ο κάθε επεξεργαστής να γνωρίζει τα στοιχεία του αρχικού προβλήματος τα οποία του αναλογούν, μέσω των εντολών MPI_Send και MPI_Recv.Στη συνέχεια, θεωρήθηκε αποδοτικότερη η διαμοίραση,μέσω μιας δομής δαχτυλιδιού,των υποπινάκων μεταξύ των επεξεργαστών, προκειμένου να γίνεται η αναζήτηση των kκοντινότερων γειτόνων (μέσω της προηγούμενη συνάρτησης knnτου v0) και στο τέλος κάθε επεξεργαστής να έχει υπολογίσει το δικό του knnresult για τον αρχικό του υποπίνακα. Δηλαδή γινόταν διαμοιρασμός των πινάκων που θεωρούνται ως Χ  ενώ το Y ήταν πάντα σταθερό για κάθε διεργασία. Μόλις τελείωνε αυτή η διαδικασία γινόταν εκπομπή του κάθε υποπίνακα στην αρχική διεργασία προκειμένου να συγκεντρωθεί το αποτέλεσμα ολοκληρωμένο.
+In this version of the algorithm, the calculation of the final knnresult was done simultaneously using several processors, essentially splitting the problem into subproblems. Initially, the matrix of X was known only to the processor 0 and distributed sub-tables of X to each of the other processors.This was accomplished through a for-loop that distributed the appropriate pointer to the original matrix and the range of values, so that each processor would know the elements of the original problem that were assigned to it, via the `MPI_Send` and `MPI_Recv` instructions. Then, it was considered more efficient to share, through a ring structure, the sub-tables between the processors, in order to search for the K-Nearest Neighbours (through the previous function knn of v0) and at the end each processor has calculated its own knn result for its initial sub-table. That means that matrices X were shared during the calculation while matrix Y was always fixed for each process. Once this process was finished, each sub-table was broadcast back to the original process in order to assemble the complete result.
 
-## Ανάλυση αλγορίθμου V2
+## Algorithm V2 analysis
 
-Σε συνέχεια της προηγούμενης διαδικασίας και σύμφωνα με την εξαιρετική ιδέα των vptrees, ο παραπάνω κώδικας μπορούσε να γίνει ακόμα ταχύτερος, αν δημιουργούταν ένα δέντρο αναζήτησης γειτόνων. Έτσι, αφότου κάθε επεξεργαστής δέχεται τον δικό του υποπίνακα X, καλείται η συνάρτηση vpt_create η οποία δημιουργεί το vptree που αντιστοιχεί στα συγκεκριμένα στοιχεία X και είναι ξεχωριστό και σταθερό για κάθε επεξεργαστή. Στη συνέχεια με την ίδια δομή δαχτυλιδιού εναλλάσσονται τα δεδομένα (σημείωση: αυτήν την φορά πέρα από τα δεδομένα πασάρονται και οι πίνακες του knnresult, προκειμένου να διατηρείται η πληροφορία των κοντινότερων γειτόνων) και στη συνέχεια γίνεται η ανανέωση των κοντινότερων γειτόνων μέσω της συνάρτησης search_vpt για το συγκεκριμένο υποσύνολο στοιχείων του, με βάση το vptree εκείνου του επεξεργαστή (το οποίο είναι σταθερό για κάθε κόμβο). Στο τέλος,κάθε στοιχείο του υποπίνακα θα έχει συγκριθεί με όλα τα vptreesκαι θα έχει κρατήσει τις κοντινότερες αποστάσεις, γλιτώνοντας πολλούς αχρείαστους υπολογισμούς αποστάσεων!
+Following on from the previous process, and in line with the excellent idea of vptrees, the above code could be made even faster by creating a neighbour search tree. Thus, after each processor receives its own subtable X, the vpt_create function is called which creates the vptree corresponding to the specific X elements, which is separate and fixed for each processor. Then, using the same ring structure, the data is swapped (note: this time, in addition to the data, the knnresult tables are also swapped in order to preserve the nearest neighbour information) and then the nearest neighbours are updated via the search_vpt function for the specific subset of its elements, based on that processor's vptree (which is fixed for each node). In the end, each element of the subtable will have been compared to all vptreesand kept the closest distances, saving a lot of unnecessary distance calculations!
 
-## Διαγράμματα
+## Diagrams
 
 - V0 Diagrams
 
 ![alt text](/diagrams/v0.png "Diagram")
 
-Από τα διαγράμματατου V0 παρατηρούμε πως το k είναι ο κύριος παράγοντας που επηρεάζει αναλογικά τους χρόνους εκτέλεσης της συγκεκριμένης υλοποίησης, δηλαδή ο αριθμών των κοντινότερων γειτόνων που αναζητούνται, και όχι ο αριθμός των διαστάσεων d του χώρου.
+From the diagrams of V0 we observe that k is the main factor that proportionally affects the execution times of this implementation, i.e., the number of nearest neighbours searched, rather than the number of dimensions d of the space.
 
 - V1 Diagrams
 
@@ -30,7 +30,7 @@
 ![alt text](/diagrams/v1/n=60000p=15.jpg "Diagram")
 ![alt text](/diagrams/v1/n=90000p=15.jpg "Diagram")
 
-Από τα παραπάνω διαγράμματα διαπιστώνουμε πως και για το V1, ανεξαρτήτως του αριθμού των επεξεργαστών που χρησιμοποιούνται στον υπολογισμό,τη μεγαλύτερη επίπτωση (αν όχι και τη μοναδική) στο χρόνο εκτέλεσης έχει ο παράγοντας k, όπως παρατηρείται και στο V0.Επίσης, καταλήγουμε στα συμπεράσματαπως για ίσο αριθμό στοιχείων nαλλά για αυξημένο αριθμό επεξεργαστών, υπάρχει μείωση στον χρόνο, αλλά για το αντίθετο, δηλαδή σταθερό αριθμό επεξεργαστών και αυξημένο n, παρατηρείται αύξηση στον χρόνο εκτέλεσης.Κάνοντας, τέλος, και την μονή δυνατή σύγκριση του V1 με το V0 για n=20000, παρατηρούμε πως το V1 εμφανίζει αρκετά μικρότερους χρόνους.
+From the diagrams above we deduct that for V1, regardless of the number of processors used in the computation, the largest impact (if not the only one) on the execution time is the factor k, as observed in V0. We also conclude that for an equal number of elements n but for an increased number of processors, there is a decrease in time, but when the opposite occurs, that is, the number of processors is constant but n increases there is an increase in execution time. Finally, when comparing V1 and V0 for n= 20000 we observe that V1 shows much less runtime.
 
 - V2 Diagrams
 
@@ -43,4 +43,4 @@
 ![alt text](/diagrams/v2/n=60000p=15.jpg "Diagram")
 ![alt text](/diagrams/v2/n=90000p=15.jpg "Diagram")
 
-Από τα παραπάνω διαγράμματα βλέπουμε αρχικά πωςγια τα ίδια ακριβώς πειράματα με το V2 έχουμε πολύ χαμηλότερους χρόνους σε σχέση με την V1 υλοποίηση!Ακόμη παρατηρούμε ότι η επίδραση του παράγοντα k(ιδίως για d>7) αρχίζει και γίνεται αμελητέα. 
+From the diagrams above we first see that for the  same experiments as V2 we have much lower runtimes compared to the V1 implementation! We also notice that the effect of the factor k (especially for d>7) starts to become negligible.
